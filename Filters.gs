@@ -385,6 +385,14 @@ Filters.runLocationFix = function() {
     // 処理結果列のインデックスを取得（なければ追加）
     const resultColumnIndex = headerRow.indexOf('処理結果');
     
+    // Locationカラムのインデックスを取得（ヘッダーから位置を特定）
+    const locationColumnIndex = headerRow.indexOf('Location');
+    
+    // Locationカラムが見つからない場合は処理を中止
+    if (locationColumnIndex === -1) {
+      throw new Error('Location列が見つかりません。ヘッダー行にLocationが含まれているか確認してください。');
+    }
+    
     // 結果データの準備
     let updatedLocations = [];
     
@@ -395,7 +403,7 @@ Filters.runLocationFix = function() {
         UI.updateProgressBar(Math.floor((index / Math.max(dataRows.length, 1)) * 100));
       }
       
-      let location = row[2]; // 所在地
+      let location = row[locationColumnIndex]; // Locationカラムの値
       let originalLocation = location;
       
       // 数字を削除するシンプルな処理
@@ -410,7 +418,7 @@ Filters.runLocationFix = function() {
       if (location !== originalLocation) {
         updatedLocations.push({
           row: index + 2, // +2 は1-indexedと、ヘッダー行をスキップするため
-          column: 3, // 所在地は3列目
+          column: locationColumnIndex + 1, // +1 は0-indexedから1-indexedに変換
           value: location
         });
       }
