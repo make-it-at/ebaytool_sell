@@ -318,9 +318,9 @@ Filters.runLengthFilter = function() {
       const title = row[0]; // 商品名
       
       // 文字数チェック
-      if (title.length > characterLimit) {
+      if (title.length < characterLimit) {
         rowsToDelete.push(index + 2); // +2 は1-indexedと、ヘッダー行をスキップするため
-        Logger.log(`文字数超過のためスキップ: "${title}" (${title.length}文字、上限${characterLimit}文字)`);
+        Logger.log(`文字数不足のためスキップ: "${title}" (${title.length}文字)`);
       }
     });
     
@@ -350,7 +350,7 @@ Filters.runLengthFilter = function() {
       }
     }
     
-    UI.showSuccessMessage(`文字数制限フィルタリングが完了しました。${rowsToDelete.length}件が文字数超過でスキップされました。`);
+    UI.showSuccessMessage(`文字数制限フィルタリングが完了しました。${rowsToDelete.length}件が文字数不足でスキップされました。`);
     Logger.endProcess('文字数制限フィルタリング完了');
     
     return true;

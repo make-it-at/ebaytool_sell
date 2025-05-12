@@ -148,8 +148,8 @@ function setupSettingsSheet(sheet) {
   sheet.getRange(settingsStartRow, 1, 1, 5).setFontWeight("bold").setBackground("#e6e6e6");
   
   // 設定項目の初期値
-  sheet.getRange(settingsStartRow + 1, 1, 1, 5).setValues([['値', 'リスト全削除', '80', '10', '80']]);
-  sheet.getRange(settingsStartRow + 2, 1, 1, 5).setValues([['説明', 'NGワード処理方法。「リスト全削除」または「部分削除モード」', '商品名の文字数上限', '最低価格（ドル）', '重複判定の類似度閾値（%）']]);
+  sheet.getRange(settingsStartRow + 1, 1, 1, 5).setValues([['値', 'リスト全削除', '20', '10', '80']]);
+  sheet.getRange(settingsStartRow + 2, 1, 1, 5).setValues([['説明', 'NGワード処理方法。「リスト全削除」または「部分削除モード」', '商品名の最大文字数', '最低価格（ドル）', '重複判定の類似度閾値（%）']]);
   
   // 所在地置換パターンセクション (空行を入れて区切る)
   const locationStartRow = settingsStartRow + 4; // 設定項目の後、1行空けて開始

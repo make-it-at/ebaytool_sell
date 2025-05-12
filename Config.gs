@@ -63,7 +63,7 @@ const Config = {
   
   // 設定のデフォルト値
   DEFAULT_SETTINGS: {
-    CHARACTER_LIMIT: 80,   // 商品名文字数上限
+    CHARACTER_LIMIT: 20,   // 商品名文字数制限
     PRICE_THRESHOLD: 10,   // 価格下限（ドル）
     DUPLICATE_THRESHOLD: 80, // 重複判定の類似度閾値（%）
     NG_WORD_MODE: 'リスト全削除'  // NGワード処理モード
