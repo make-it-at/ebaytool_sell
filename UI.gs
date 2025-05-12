@@ -2,6 +2,9 @@
  * eBay出品作業効率化ツール - UIモジュール
  * 
  * ユーザーインターフェース関連の処理を提供します。
+ * 
+ * バージョン: v1.2.0
+ * 最終更新日: 2024-07-16
  */
 
 // UI名前空間
@@ -77,16 +80,53 @@ UI.showHelpDialog = function() {
 };
 
 /**
+ * テストデータ設定についてのヘルプダイアログを表示
+ */
+UI.showTestDataHelpDialog = function() {
+  const htmlOutput = HtmlService.createHtmlOutput(`
+    <div style="font-family: Arial, sans-serif; padding: 15px;">
+      <h2>テストデータの設定方法</h2>
+      <p>テストデータを「テストデータ」シートに設定するには、次の方法があります：</p>
+      
+      <ol>
+        <li>ローカルのCSVファイル（<code>/Users/kyosukemakita/Documents/Cursor/ebaytool_sell/eBay Export May 12 2025.csv</code>）を開く</li>
+        <li>そのデータをコピーして、スプレッドシートの「テストデータ」シートに貼り付ける</li>
+        <li>データはヘッダー行を含み、6行目以降に貼り付けてください（1-5行目は情報表示用）</li>
+      </ol>
+      
+      <p>設定後、サイドバーの「テスト用CSVインポート」ボタンをクリックすると、
+      「テストデータ」シートのデータが「出品データ」シートに転記されます。</p>
+      
+      <div style="margin-top: 20px; color: #666;">
+        <p><strong>注意：</strong> Google Apps Scriptではローカルファイルシステムに直接アクセスできないため、
+        この方法でテストデータを設定しています。</p>
+      </div>
+      
+      <div style="margin-top: 20px; text-align: center;">
+        <button onclick="google.script.host.close();" 
+                style="padding: 8px 15px; background: #4285f4; color: white; 
+                       border: none; border-radius: 3px; cursor: pointer;">
+          閉じる
+        </button>
+      </div>
+    </div>
+  `)
+  .setWidth(500)
+  .setHeight(400)
+  .setTitle('テストデータ設定ヘルプ');
+  
+  SpreadsheetApp.getUi().showModalDialog(htmlOutput, 'テストデータ設定ヘルプ');
+};
+
+/**
  * 成功メッセージを表示する
  * @param {string} message 表示するメッセージ
- * @param {string} url オプションのURL
  */
-UI.showSuccessMessage = function(message, url) {
+UI.showSuccessMessage = function(message) {
   try {
     // UIが利用可能かチェック
-    let ui;
     try {
-      ui = SpreadsheetApp.getUi();
+      SpreadsheetApp.getUi();
     } catch (e) {
       // UIが利用できない場合はログのみに記録
       console.log('成功: ' + message);
@@ -96,43 +136,35 @@ UI.showSuccessMessage = function(message, url) {
     
     // サイドバーに通知を表示
     try {
-      // サイドバー経由でメッセージを表示
-      const script = `
-        if (typeof showNotification === 'function') {
-          showNotification('success', '${message}');
-        } else {
-          alert('${message}');
-        }
-        
-        ${url ? `
-          if (confirm('CSVをダウンロードしますか？')) {
-            window.open('${url}', '_blank');
-          }
-        ` : ''}
-      `;
-      
-      const html = HtmlService.createHtmlOutput(
-        '<script>' + script + '</script>'
+      // サイドバーが存在するかチェック
+      const sidebar = HtmlService.createHtmlOutput(
+        '<script>function checkSidebar() { return (typeof showNotification === "function"); }</script>'
       );
       
-      ui.showModelessDialog(html, '完了');
-    } catch (e) {
-      // サイドバーがない場合は通常のアラート
-      if (url) {
-        const response = ui.alert('成功', message + '\n\nCSVをダウンロードしますか？', ui.ButtonSet.YES_NO);
-        if (response === ui.Button.YES) {
-          // ダウンロードURLを開く
-          const html = HtmlService.createHtmlOutput(
-            '<script>window.open("' + url + '", "_blank"); google.script.host.close();</script>'
-          )
-          .setWidth(10)
-          .setHeight(10);
-          
-          ui.showModalDialog(html, 'ダウンロード中...');
+      // サイドバー経由でメッセージを表示するコールバック関数
+      const callback = function(hasSidebar) {
+        if (hasSidebar) {
+          const script = `showNotification('success', '${message.replace(/'/g, "\\'")}');`;
+          ScriptApp.run(() => {
+            try {
+              const html = HtmlService.createHtmlOutput(`<script>${script}</script>`);
+              // 非表示のカスタム関数実行（ダイアログなし）
+              SpreadsheetApp.getActive().toast(message, '成功', 3);
+            } catch (e) {
+              Logger.log('サイドバー通知表示エラー: ' + e.message);
+            }
+          });
+        } else {
+          // サイドバーがない場合はtoastのみ使用
+          SpreadsheetApp.getActive().toast(message, '成功', 3);
         }
-      } else {
-        ui.alert('成功', message, ui.ButtonSet.OK);
-      }
+      };
+      
+      // トーストのみを使用
+      SpreadsheetApp.getActive().toast(message, '成功', 3);
+    } catch (e) {
+      // トーストのみを使用
+      SpreadsheetApp.getActive().toast(message, '成功', 3);
     }
   } catch (finalError) {
     // 最終的なフォールバック - ログのみ
@@ -148,9 +180,8 @@ UI.showSuccessMessage = function(message, url) {
 UI.showErrorMessage = function(message) {
   try {
     // UIが利用可能かチェック
-    let ui;
     try {
-      ui = SpreadsheetApp.getUi();
+      SpreadsheetApp.getUi();
     } catch (e) {
       // UIが利用できない場合はログのみに記録
       console.error('UI利用不可: ' + message);
@@ -158,25 +189,27 @@ UI.showErrorMessage = function(message) {
       return;
     }
     
-    // サイドバーに通知を表示
+    // トーストを使用してメッセージを表示（ダイアログなし）
+    SpreadsheetApp.getActive().toast(message, 'エラー', 5);
+    
+    // サイドバーに通知を表示（可能な場合）
     try {
-      // サイドバー経由でメッセージを表示
       const script = `
         if (typeof showNotification === 'function') {
-          showNotification('error', '${message}');
-        } else {
-          alert('エラー: ${message}');
+          showNotification('error', '${message.replace(/'/g, "\\'")}');
         }
       `;
       
-      const html = HtmlService.createHtmlOutput(
-        '<script>' + script + '</script>'
-      );
-      
-      ui.showModelessDialog(html, 'エラー');
+      // サイドバーへのメッセージ送信を試行（エラーは無視）
+      ScriptApp.run(() => {
+        try {
+          const html = HtmlService.createHtmlOutput(`<script>${script}</script>`);
+        } catch (e) {
+          // サイドバー通知に失敗してもトーストには表示されているので無視
+        }
+      });
     } catch (e) {
-      // サイドバーがない場合は通常のアラート
-      ui.alert('エラー', message, ui.ButtonSet.OK);
+      // サイドバー通知に失敗してもトーストには表示されているので無視
     }
   } catch (finalError) {
     // 最終的なフォールバック - ログのみ

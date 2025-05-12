@@ -1,21 +1,24 @@
 /**
+ * eBay出品作業効率化ツール - メインアプリケーション
+ * 
+ * メインアプリケーションの初期化、UI表示、イベントハンドリングを担当します。
+ * 
+ * バージョン: v1.2.0
+ * 最終更新日: 2024-07-16
+ */
+
+// アプリケーションのバージョン情報
+const APP_VERSION = 'v1.2.0';
+
+/**
  * eBay出品作業効率化ツール
  * 
  * このスクリプトはeBay出品作業を効率化するためのGoogle Apps Scriptプロジェクトです。
  * 商品データの処理、フィルタリング、eBayフォーマットへの変換を自動化します。
- * 
- * バージョン: v1.1.1
- * 最終更新日: 2024-07-11
  */
-
-// アプリケーションバージョン
-const APP_VERSION = 'v1.1.1';
 
 // スプレッドシートが開かれたときに実行
 function onOpen() {
-  // バージョン情報をログに記録
-  Logger.log(`eBay出品ツール ${APP_VERSION} を起動しました`);
-  
   createMenu();
   showSidebar();
 }
@@ -46,7 +49,12 @@ function createMenu() {
 
 // サイドバーの表示
 function showSidebar() {
-  const html = HtmlService.createHtmlOutputFromFile('Sidebar')
+  const template = HtmlService.createTemplateFromFile('Sidebar');
+  
+  // テンプレートにバージョン情報を渡す
+  template.version = APP_VERSION;
+  
+  const html = template.evaluate()
     .setTitle('eBay出品ツール')
     .setWidth(300);
   SpreadsheetApp.getUi().showSidebar(html);
@@ -105,8 +113,10 @@ function setupSheets() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sheetNames = [
     Config.SHEET_NAMES.IMPORT, 
+    Config.SHEET_NAMES.LISTING,  // 出品データシートを追加
     Config.SHEET_NAMES.SETTINGS, 
-    Config.SHEET_NAMES.LOG
+    Config.SHEET_NAMES.LOG,
+    Config.SHEET_NAMES.TEST_DATA
   ];
   
   // 必要なシートが存在しない場合は作成
@@ -118,14 +128,24 @@ function setupSheets() {
   
   // 各シートの初期設定
   setupImportSheet(ss.getSheetByName(Config.SHEET_NAMES.IMPORT));
+  setupListingSheet(ss.getSheetByName(Config.SHEET_NAMES.LISTING));  // 出品データシートの設定
   setupSettingsSheet(ss.getSheetByName(Config.SHEET_NAMES.SETTINGS));
   setupLogSheet(ss.getSheetByName(Config.SHEET_NAMES.LOG));
+  setupTestDataSheet(ss.getSheetByName(Config.SHEET_NAMES.TEST_DATA));
 }
 
 // データインポートシートの設定
 function setupImportSheet(sheet) {
   // ヘッダー行の設定
   const headers = Config.SHEET_HEADERS.IMPORT;
+  sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+  sheet.setFrozenRows(1);
+}
+
+// 出品データシートの設定
+function setupListingSheet(sheet) {
+  // 出品データシートのヘッダー設定（テストデータと同じフォーマット）
+  const headers = ["Action(CC=Cp1252)","CustomLabel","StartPrice","ConditionID","Title","Description","PicURL","UPC","Category","PaymentProfileName","ReturnProfileName","ShippingProfileName","Country","Location","Apply Profile Domestic","Apply Profile International","PayPalAccepted","PayPalEmailAddress","BuyerRequirements:LinkedPayPalAccount","Duration","Format","Quantity","Currency","SiteID","BestOfferEnabled"];
   sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
   sheet.setFrozenRows(1);
 }
@@ -160,6 +180,23 @@ function setupSettingsSheet(sheet) {
   sheet.getRange(settingsStartRow + 1, 1, 1, 5).setValues([['値', 'リスト全削除', '20', '10', '80']]);
   sheet.getRange(settingsStartRow + 2, 1, 1, 5).setValues([['説明', 'NGワード処理方法。「リスト全削除」または「部分削除モード」', '商品名の最大文字数', '最低価格（ドル）', '重複判定の類似度閾値（%）']]);
   
+  // 所在地置換パターンセクション (空行を入れて区切る)
+  const locationStartRow = settingsStartRow + 4; // 設定項目の後、1行空けて開始
+  
+  sheet.getRange(locationStartRow, 1, 1, 3).setValues([['所在地置換パターン', '', '']]);
+  sheet.getRange(locationStartRow, 1, 1, 3).setFontWeight("bold").setBackground("#e6e6e6");
+  sheet.getRange(locationStartRow + 1, 1, 1, 3).setValues([['検索', '置換', '説明']]);
+  sheet.getRange(locationStartRow + 1, 1, 1, 3).setFontWeight("bold").setBackground("#f2f2f2");
+  
+  // 初期パターンの設定
+  const locationPatterns = [
+    ['[0-9]+', '', '数字を削除します'],
+    ['tokyo', '東京', '英語表記を日本語に変換'],
+    ['osaka', '大阪', '英語表記を日本語に変換']
+  ];
+  
+  sheet.getRange(locationStartRow + 2, 1, locationPatterns.length, 3).setValues(locationPatterns);
+  
   // 列幅の調整
   sheet.setColumnWidth(1, 200);
   sheet.setColumnWidth(2, 200);
@@ -174,6 +211,48 @@ function setupLogSheet(sheet) {
   const headers = ['タイムスタンプ', 'イベント', '詳細'];
   sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
   sheet.setFrozenRows(1);
+}
+
+// テストデータシートの設定
+function setupTestDataSheet(sheet) {
+  // ヘッダー行を設定 (必要に応じてeBay Export May 12 2025.csvのヘッダーに合わせる)
+  const headers = ["Action(CC=Cp1252)","CustomLabel","StartPrice","ConditionID","Title","Description","PicURL","UPC","Category","PaymentProfileName","ReturnProfileName","ShippingProfileName","Country","Location","Apply Profile Domestic","Apply Profile International","PayPalAccepted","PayPalEmailAddress","BuyerRequirements:LinkedPayPalAccount","Duration","Format","Quantity","Currency","SiteID","BestOfferEnabled","",""];
+  
+  // シートがすでにデータを持っているか確認
+  const existingData = sheet.getDataRange().getValues();
+  
+  // すでにデータがあり、ヘッダーも一致する場合は何もしない
+  if (existingData.length > 1 && arraysEqual(existingData[0], headers)) {
+    return;
+  }
+  
+  // シートをクリアして新しいヘッダーを設定
+  sheet.clear();
+  sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+  sheet.setFrozenRows(1);
+  
+  // テストデータのパスとファイル名の情報を表示
+  sheet.getRange(2, 1, 1, 3).setValues([["テストデータ情報", "パス:", "/Users/kyosukemakita/Documents/Cursor/ebaytool_sell/eBay Export May 12 2025.csv"]]);
+  sheet.getRange(3, 1, 1, 3).setValues([["注意事項", "", "このシートにはテスト用CSVデータが入ります。データを「データインポート」シートに転記するには「テスト用CSVインポート」ボタンを使用してください。"]]);
+  
+  // 見やすくするために書式設定
+  sheet.getRange(2, 1, 2, 3).setBackground("#f2f2f2");
+  sheet.getRange(2, 1, 2, 1).setFontWeight("bold");
+  
+  // サンプルデータがないことを通知
+  sheet.getRange(5, 1).setValue("テストデータがまだインポートされていません。CSVファイルを手動でこのシートに貼り付けるか、設定してください。");
+  sheet.getRange(5, 1).setFontColor("red");
+}
+
+/**
+ * 配列が等しいかどうかをチェックするヘルパー関数
+ */
+function arraysEqual(a, b) {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
 }
 
 /**
@@ -243,6 +322,81 @@ function openNgWordsSettings() {
     Logger.logError('NGワード設定を開く際にエラーが発生: ' + error.message);
     UI.showErrorMessage('NGワード設定を開けませんでした: ' + error.message);
     return false;
+  }
+}
+
+/**
+ * テストデータシートから出品データシートにデータを転記する
+ * テスト用CSVインポート機能
+ */
+function importTestCsv() {
+  Logger.startProcess('テスト用CSVインポート');
+  UI.showProgressBar('テスト用CSVデータをインポートしています...');
+  
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const testDataSheet = ss.getSheetByName(Config.SHEET_NAMES.TEST_DATA);
+    let listingSheet = ss.getSheetByName(Config.SHEET_NAMES.LISTING);
+    
+    // テストデータシートが存在するか確認
+    if (!testDataSheet) {
+      throw new Error('テストデータシートが見つかりません。初期設定を実行してください。');
+    }
+    
+    // 出品データシートが存在しない場合は作成
+    if (!listingSheet) {
+      listingSheet = ss.insertSheet(Config.SHEET_NAMES.LISTING);
+      setupListingSheet(listingSheet);
+    }
+    
+    // テストデータシートからデータを取得
+    const testData = testDataSheet.getDataRange().getValues();
+    
+    // データが十分にあるか確認
+    if (testData.length <= 5) { // ヘッダー + 説明行を考慮
+      throw new Error('テストデータシートに有効なデータがありません。CSVデータをシートに貼り付けてください。\n(パス: /Users/kyosukemakita/Documents/Cursor/ebaytool_sell/eBay Export May 12 2025.csv)');
+    }
+    
+    // 実際のデータ部分を取得（ヘッダー行と説明行をスキップ）
+    const headerRow = testData[0]; // ヘッダー行
+    const actualData = testData.slice(5); // 説明行をスキップして実データを取得
+    
+    // データ行数チェック
+    if (actualData.length > Config.MAX_ROWS) {
+      throw new Error(`インポートするデータが多すぎます。最大${Config.MAX_ROWS}行までです。`);
+    }
+    
+    // 出品データシートをクリアしてヘッダー行を設定
+    listingSheet.clearContents();
+    
+    UI.updateProgressBar(30);
+    
+    // ヘッダー行を設定
+    listingSheet.getRange(1, 1, 1, headerRow.length).setValues([headerRow]);
+    
+    UI.updateProgressBar(50);
+    
+    // 実データ部分を転記
+    if (actualData.length > 0) {
+      listingSheet.getRange(2, 1, actualData.length, headerRow.length).setValues(actualData);
+    }
+    
+    UI.updateProgressBar(90);
+    
+    // 完了メッセージの表示
+    const message = `テスト用CSVデータが正常にインポートされました。\n${actualData.length}件のデータを出品データシートにインポートしました。\nファイル: eBay Export May 12 2025.csv`;
+    UI.showSuccessMessage(message);
+    Logger.endProcess('テスト用CSVインポート完了');
+    
+    UI.updateProgressBar(100);
+    
+    return true;
+  } catch (error) {
+    Logger.logError('テスト用CSVインポート中にエラー: ' + error.message);
+    UI.showErrorMessage('テスト用CSVインポート中にエラーが発生しました: ' + error.message);
+    return false;
+  } finally {
+    UI.hideProgressBar();
   }
 }
 

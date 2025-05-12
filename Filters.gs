@@ -1,11 +1,49 @@
 /**
  * eBay出品作業効率化ツール - フィルターモジュール
  * 
- * データのフィルタリング処理を行う関数群を提供します。
+ * 各種フィルタリング機能を提供します。
+ * 
+ * バージョン: v1.2.0
+ * 最終更新日: 2024-07-16
  */
 
 // Filters名前空間
 const Filters = {};
+
+/**
+ * エディタから直接実行するための所在地情報修正のグローバルエントリーポイント
+ */
+function runLocationFixFromEditor() {
+  return Filters.runLocationFix();
+}
+
+/**
+ * エディタから直接実行するためのNGワードフィルタリングのグローバルエントリーポイント
+ */
+function runNgWordFilterFromEditor() {
+  return Filters.runNgWordFilter();
+}
+
+/**
+ * エディタから直接実行するための重複チェックのグローバルエントリーポイント
+ */
+function runDuplicateCheckFromEditor() {
+  return Filters.runDuplicateCheck();
+}
+
+/**
+ * エディタから直接実行するための文字数制限フィルターのグローバルエントリーポイント
+ */
+function runLengthFilterFromEditor() {
+  return Filters.runLengthFilter();
+}
+
+/**
+ * エディタから直接実行するための価格フィルターのグローバルエントリーポイント
+ */
+function runPriceFilterFromEditor() {
+  return Filters.runPriceFilter();
+}
 
 /**
  * NGワードフィルタリングを実行する
@@ -16,15 +54,26 @@ Filters.runNgWordFilter = function() {
   
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const importSheet = ss.getSheetByName(Config.SHEET_NAMES.IMPORT);
+    const listingSheet = ss.getSheetByName(Config.SHEET_NAMES.LISTING);
+    
+    // 出品データシートが存在するか確認
+    if (!listingSheet) {
+      throw new Error('出品データシートが見つかりません。初期設定を実行するか、データをインポートしてください。');
+    }
     
     // データ範囲を取得
-    const dataRange = importSheet.getDataRange();
+    const dataRange = listingSheet.getDataRange();
     const values = dataRange.getValues();
     
     // ヘッダー行をスキップ
     const headerRow = values[0];
     const dataRows = values.slice(1);
+    
+    // Title列のインデックスを取得
+    const titleColumnIndex = headerRow.indexOf('Title');
+    if (titleColumnIndex === -1) {
+      throw new Error('Title列が見つかりません。ヘッダー行に「Title」が含まれているか確認してください。');
+    }
     
     // 処理結果列のインデックスを取得（なければ追加）
     const resultColumnIndex = headerRow.indexOf('処理結果');
@@ -33,6 +82,12 @@ Filters.runNgWordFilter = function() {
     const settings = Config.getSettings();
     const ngWords = settings.ngWords;
     const ngWordMode = settings.ngWordMode;
+    
+    // 設定内容をログに出力（デバッグ用）
+    Logger.log(`NGワード設定: ${ngWords ? ngWords.length : 0}件のNGワード, モード: ${ngWordMode}`);
+    if (ngWords && ngWords.length > 0) {
+      ngWords.forEach(word => Logger.log(`NGワード: "${word}"`));
+    }
     
     // 新しい結果データの準備
     let resultData = [];
@@ -45,15 +100,17 @@ Filters.runNgWordFilter = function() {
         UI.updateProgressBar(Math.floor((index / Math.max(dataRows.length, 1)) * 100));
       }
       
-      const title = row[0]; // 商品名
+      const title = row[titleColumnIndex]; // Title列の値
       
       // NGワードのチェック
       let containsNgWord = false;
       let processedTitle = title;
+      let matchedNgWords = [];
       
       for (const ngWord of ngWords) {
         if (ngWord && title.toLowerCase().includes(ngWord.toLowerCase())) {
           containsNgWord = true;
+          matchedNgWords.push(ngWord);
           
           // 部分削除モードの場合は、NGワードのみを削除
           if (ngWordMode === '部分削除モード') {
@@ -68,14 +125,16 @@ Filters.runNgWordFilter = function() {
       // リスト全削除モードでNGワードを含む場合は削除対象に追加
       if (containsNgWord && ngWordMode !== '部分削除モード') {
         rowsToDelete.push(index + 2); // +2 は1-indexedと、ヘッダー行をスキップするため
-        Logger.log(`NGワード含有のためスキップ: ${title}`);
+        Logger.log(`NGワード含有のためスキップ: "${title}", 一致NGワード: ${matchedNgWords.join(', ')}`);
       } else {
         // それ以外の場合は結果データに追加
         const newRow = [...row];
         
         // 部分削除モードの場合、タイトルを置き換え
         if (ngWordMode === '部分削除モード' && containsNgWord) {
-          newRow[0] = processedTitle;
+          newRow[titleColumnIndex] = processedTitle;
+          Logger.log(`NGワード部分削除: "${title}" → "${processedTitle}", 一致NGワード: ${matchedNgWords.join(', ')}`);
+          
           // 処理結果列がある場合は更新
           if (resultColumnIndex >= 0) {
             newRow[resultColumnIndex] = 'NGワード部分削除';
@@ -100,7 +159,7 @@ Filters.runNgWordFilter = function() {
     if (rowsToDelete.length > 0) {
       rowsToDelete.sort((a, b) => b - a); // 降順にソート
       for (const rowIndex of rowsToDelete) {
-        importSheet.deleteRow(rowIndex);
+        listingSheet.deleteRow(rowIndex);
       }
       
       // 削除後に結果データの行番号を再計算（削除した行より下の行は上にシフトする）
@@ -118,8 +177,8 @@ Filters.runNgWordFilter = function() {
     // 更新データを反映（行ごとに更新）
     resultData.forEach(([rowIndex, row]) => {
       // 行が存在する場合のみ更新
-      if (rowIndex >= 2 && rowIndex <= importSheet.getLastRow()) {
-        importSheet.getRange(rowIndex, 1, 1, row.length).setValues([row]);
+      if (rowIndex >= 2 && rowIndex <= listingSheet.getLastRow()) {
+        listingSheet.getRange(rowIndex, 1, 1, row.length).setValues([row]);
       }
     });
     
@@ -145,10 +204,15 @@ Filters.runDuplicateCheck = function() {
   
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const importSheet = ss.getSheetByName(Config.SHEET_NAMES.IMPORT);
+    const listingSheet = ss.getSheetByName(Config.SHEET_NAMES.LISTING);
+    
+    // 出品データシートが存在するか確認
+    if (!listingSheet) {
+      throw new Error('出品データシートが見つかりません。初期設定を実行するか、データをインポートしてください。');
+    }
     
     // データ範囲を取得
-    const dataRange = importSheet.getDataRange();
+    const dataRange = listingSheet.getDataRange();
     const values = dataRange.getValues();
     
     // ヘッダー行をスキップ
@@ -198,15 +262,15 @@ Filters.runDuplicateCheck = function() {
     if (rowsToDelete.length > 0) {
       rowsToDelete.sort((a, b) => b - a); // 降順にソート
       for (const rowIndex of rowsToDelete) {
-        importSheet.deleteRow(rowIndex);
+        listingSheet.deleteRow(rowIndex);
       }
     }
     
     // 残った行に処理結果を更新
     if (resultColumnIndex >= 0) {
-      const lastRow = importSheet.getLastRow();
+      const lastRow = listingSheet.getLastRow();
       if (lastRow > 1) { // ヘッダー行より下に行が存在する場合
-        const resultRange = importSheet.getRange(2, resultColumnIndex + 1, lastRow - 1, 1);
+        const resultRange = listingSheet.getRange(2, resultColumnIndex + 1, lastRow - 1, 1);
         const currentValues = resultRange.getValues();
         
         // 各行の処理結果を「OK」または既存値+「重複チェック完了」に更新
@@ -288,10 +352,15 @@ Filters.runLengthFilter = function() {
   
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const importSheet = ss.getSheetByName(Config.SHEET_NAMES.IMPORT);
+    const listingSheet = ss.getSheetByName(Config.SHEET_NAMES.LISTING);
+    
+    // 出品データシートが存在するか確認
+    if (!listingSheet) {
+      throw new Error('出品データシートが見つかりません。初期設定を実行するか、データをインポートしてください。');
+    }
     
     // データ範囲を取得
-    const dataRange = importSheet.getDataRange();
+    const dataRange = listingSheet.getDataRange();
     const values = dataRange.getValues();
     
     // ヘッダー行をスキップ
@@ -329,15 +398,15 @@ Filters.runLengthFilter = function() {
     if (rowsToDelete.length > 0) {
       rowsToDelete.sort((a, b) => b - a); // 降順にソート
       for (const rowIndex of rowsToDelete) {
-        importSheet.deleteRow(rowIndex);
+        listingSheet.deleteRow(rowIndex);
       }
     }
     
     // 残った行に処理結果を更新
     if (resultColumnIndex >= 0) {
-      const lastRow = importSheet.getLastRow();
+      const lastRow = listingSheet.getLastRow();
       if (lastRow > 1) { // ヘッダー行より下に行が存在する場合
-        const resultRange = importSheet.getRange(2, resultColumnIndex + 1, lastRow - 1, 1);
+        const resultRange = listingSheet.getRange(2, resultColumnIndex + 1, lastRow - 1, 1);
         const currentValues = resultRange.getValues();
         
         // 各行の処理結果を「OK」または既存値+「文字数OK」に更新
@@ -372,10 +441,15 @@ Filters.runLocationFix = function() {
   
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const importSheet = ss.getSheetByName(Config.SHEET_NAMES.IMPORT);
+    const listingSheet = ss.getSheetByName(Config.SHEET_NAMES.LISTING);
+    
+    // 出品データシートが存在するか確認
+    if (!listingSheet) {
+      throw new Error('出品データシートが見つかりません。初期設定を実行するか、データをインポートしてください。');
+    }
     
     // データ範囲を取得
-    const dataRange = importSheet.getDataRange();
+    const dataRange = listingSheet.getDataRange();
     const values = dataRange.getValues();
     
     // ヘッダー行をスキップ
@@ -386,12 +460,22 @@ Filters.runLocationFix = function() {
     const resultColumnIndex = headerRow.indexOf('処理結果');
     
     // Locationカラムのインデックスを取得（ヘッダーから位置を特定）
-    const locationColumnIndex = headerRow.indexOf('Location');
+    let locationColumnIndex = headerRow.indexOf('所在地');
     
-    // Locationカラムが見つからない場合は処理を中止
+    // Locationカラムが見つからない場合はLocationも試す
     if (locationColumnIndex === -1) {
-      throw new Error('Location列が見つかりません。ヘッダー行にLocationが含まれているか確認してください。');
+      const altLocationColumnIndex = headerRow.indexOf('Location');
+      if (altLocationColumnIndex === -1) {
+        throw new Error('所在地列が見つかりません。ヘッダー行に「所在地」または「Location」が含まれているか確認してください。');
+      } else {
+        // Locationカラムが見つかった場合
+        Logger.log('「Location」列を所在地情報として使用します');
+        locationColumnIndex = altLocationColumnIndex;
+      }
     }
+    
+    // 進捗表示のために更新
+    UI.updateProgressBar(10);
     
     // 結果データの準備
     let updatedLocations = [];
@@ -400,15 +484,17 @@ Filters.runLocationFix = function() {
     dataRows.forEach((row, index) => {
       // 処理の進捗状況を更新（10%単位）
       if (index % Math.floor(Math.max(dataRows.length, 10) / 10) === 0) {
-        UI.updateProgressBar(Math.floor((index / Math.max(dataRows.length, 1)) * 100));
+        UI.updateProgressBar(10 + Math.floor((index / Math.max(dataRows.length, 1)) * 80));
       }
       
-      let location = row[locationColumnIndex]; // Locationカラムの値
+      let location = row[locationColumnIndex]; // 所在地カラムの値
       let originalLocation = location;
       
       // 数字を削除するシンプルな処理
       try {
-        location = location.replace(/[0-9]+/g, '');
+        if (location && typeof location === 'string') {
+          location = location.replace(/[0-9]+/g, '');
+        }
       } catch (e) {
         // エラーが発生しても処理を続行
         Logger.logError('所在地情報の数字削除中にエラー（スキップして続行）: ' + e.message);
@@ -424,17 +510,25 @@ Filters.runLocationFix = function() {
       }
     });
     
+    // 進捗表示を更新
+    UI.updateProgressBar(90);
+    
     // 処理結果を反映
     // 所在地情報を更新
-    updatedLocations.forEach(update => {
-      importSheet.getRange(update.row, update.column).setValue(update.value);
+    updatedLocations.forEach((update, index) => {
+      listingSheet.getRange(update.row, update.column).setValue(update.value);
+      
+      // 進捗表示の細かい更新
+      if (index % Math.floor(Math.max(updatedLocations.length, 10) / 10) === 0) {
+        UI.updateProgressBar(90 + Math.floor((index / Math.max(updatedLocations.length, 1)) * 10));
+      }
     });
     
     // 処理結果列を更新
     if (resultColumnIndex >= 0) {
-      const lastRow = importSheet.getLastRow();
+      const lastRow = listingSheet.getLastRow();
       if (lastRow > 1) { // ヘッダー行より下に行が存在する場合
-        const resultRange = importSheet.getRange(2, resultColumnIndex + 1, lastRow - 1, 1);
+        const resultRange = listingSheet.getRange(2, resultColumnIndex + 1, lastRow - 1, 1);
         const currentValues = resultRange.getValues();
         
         // 各行の処理結果を「OK」または既存値+「所在地修正完了」に更新
@@ -446,6 +540,8 @@ Filters.runLocationFix = function() {
         resultRange.setValues(newValues);
       }
     }
+    
+    UI.updateProgressBar(100);
     
     UI.showSuccessMessage(`所在地情報の修正が完了しました。${updatedLocations.length}件の所在地情報を修正しました。`);
     Logger.endProcess('所在地情報修正完了');
@@ -469,10 +565,15 @@ Filters.runPriceFilter = function() {
   
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const importSheet = ss.getSheetByName(Config.SHEET_NAMES.IMPORT);
+    const listingSheet = ss.getSheetByName(Config.SHEET_NAMES.LISTING);
+    
+    // 出品データシートが存在するか確認
+    if (!listingSheet) {
+      throw new Error('出品データシートが見つかりません。初期設定を実行するか、データをインポートしてください。');
+    }
     
     // データ範囲を取得
-    const dataRange = importSheet.getDataRange();
+    const dataRange = listingSheet.getDataRange();
     const values = dataRange.getValues();
     
     // ヘッダー行をスキップ
@@ -510,15 +611,15 @@ Filters.runPriceFilter = function() {
     if (rowsToDelete.length > 0) {
       rowsToDelete.sort((a, b) => b - a); // 降順にソート
       for (const rowIndex of rowsToDelete) {
-        importSheet.deleteRow(rowIndex);
+        listingSheet.deleteRow(rowIndex);
       }
     }
     
     // 残った行に処理結果を更新
     if (resultColumnIndex >= 0) {
-      const lastRow = importSheet.getLastRow();
+      const lastRow = listingSheet.getLastRow();
       if (lastRow > 1) { // ヘッダー行より下に行が存在する場合
-        const resultRange = importSheet.getRange(2, resultColumnIndex + 1, lastRow - 1, 1);
+        const resultRange = listingSheet.getRange(2, resultColumnIndex + 1, lastRow - 1, 1);
         const currentValues = resultRange.getValues();
         
         // 各行の処理結果を「OK」または既存値+「価格OK」に更新
