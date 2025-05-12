@@ -11,8 +11,12 @@ const UI = {};
  * サイドバーを表示する
  */
 UI.showSidebar = function() {
-  const html = HtmlService.createTemplateFromFile('Sidebar')
-    .evaluate()
+  const template = HtmlService.createTemplateFromFile('Sidebar');
+  
+  // テンプレートにバージョン情報を渡す
+  template.version = APP_VERSION || 'v1.1.0';
+  
+  const html = template.evaluate()
     .setTitle(Config.UI.SIDEBAR_TITLE)
     .setWidth(Config.UI.SIDEBAR_WIDTH);
   

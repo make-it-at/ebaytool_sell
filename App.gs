@@ -3,10 +3,19 @@
  * 
  * このスクリプトはeBay出品作業を効率化するためのGoogle Apps Scriptプロジェクトです。
  * 商品データの処理、フィルタリング、eBayフォーマットへの変換を自動化します。
+ * 
+ * バージョン: v1.1.0
+ * 最終更新日: 2024-07-11
  */
+
+// アプリケーションバージョン
+const APP_VERSION = 'v1.1.0';
 
 // スプレッドシートが開かれたときに実行
 function onOpen() {
+  // バージョン情報をログに記録
+  Logger.log(`eBay出品ツール ${APP_VERSION} を起動しました`);
+  
   createMenu();
   showSidebar();
 }
