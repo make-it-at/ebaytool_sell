@@ -385,10 +385,6 @@ Filters.runLocationFix = function() {
     // 処理結果列のインデックスを取得（なければ追加）
     const resultColumnIndex = headerRow.indexOf('処理結果');
     
-    // 設定を取得
-    const settings = Config.getSettings();
-    const locationPatterns = settings.locationPatterns || [];
-    
     // 結果データの準備
     let updatedLocations = [];
     
@@ -402,20 +398,12 @@ Filters.runLocationFix = function() {
       let location = row[2]; // 所在地
       let originalLocation = location;
       
-      // 所在地情報の修正
-      if (locationPatterns && locationPatterns.length > 0) {
-        locationPatterns.forEach(pattern => {
-          if (pattern && pattern.search) {
-            // 正規表現を使用して置換
-            try {
-              const regex = new RegExp(pattern.search, 'g');
-              location = location.replace(regex, pattern.replace || '');
-            } catch (regexError) {
-              // 正規表現エラーを無視して続行
-              Logger.logError(`正規表現エラー（無視して続行）: ${pattern.search} - ${regexError.message}`);
-            }
-          }
-        });
+      // 数字を削除するシンプルな処理
+      try {
+        location = location.replace(/[0-9]+/g, '');
+      } catch (e) {
+        // エラーが発生しても処理を続行
+        Logger.logError('所在地情報の数字削除中にエラー（スキップして続行）: ' + e.message);
       }
       
       // 所在地が変更された場合にのみ更新リストに追加

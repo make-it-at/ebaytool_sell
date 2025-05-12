@@ -151,23 +151,6 @@ function setupSettingsSheet(sheet) {
   sheet.getRange(settingsStartRow + 1, 1, 1, 5).setValues([['値', 'リスト全削除', '20', '10', '80']]);
   sheet.getRange(settingsStartRow + 2, 1, 1, 5).setValues([['説明', 'NGワード処理方法。「リスト全削除」または「部分削除モード」', '商品名の最大文字数', '最低価格（ドル）', '重複判定の類似度閾値（%）']]);
   
-  // 所在地置換パターンセクション (空行を入れて区切る)
-  const locationStartRow = settingsStartRow + 4; // 設定項目の後、1行空けて開始
-  
-  sheet.getRange(locationStartRow, 1, 1, 3).setValues([['所在地置換パターン', '', '']]);
-  sheet.getRange(locationStartRow, 1, 1, 3).setFontWeight("bold").setBackground("#e6e6e6");
-  sheet.getRange(locationStartRow + 1, 1, 1, 3).setValues([['検索', '置換', '説明']]);
-  sheet.getRange(locationStartRow + 1, 1, 1, 3).setFontWeight("bold").setBackground("#f2f2f2");
-  
-  // 初期パターンの設定
-  const locationPatterns = [
-    ['[0-9]+', '', '数字を削除します'],
-    ['tokyo', '東京', '英語表記を日本語に変換'],
-    ['osaka', '大阪', '英語表記を日本語に変換']
-  ];
-  
-  sheet.getRange(locationStartRow + 2, 1, locationPatterns.length, 3).setValues(locationPatterns);
-  
   // 列幅の調整
   sheet.setColumnWidth(1, 200);
   sheet.setColumnWidth(2, 200);

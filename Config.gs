@@ -72,8 +72,7 @@ const Config = {
   // テーブルのセクション開始行目安（実際の値は動的に計算）
   SECTION_START: {
     NG_WORDS: 2,         // NGワードテーブルの開始行（ヘッダー行の次）
-    SETTINGS: 10,         // 設定項目テーブルの開始行目安
-    LOCATION_PATTERNS: 15 // 所在地置換パターンテーブルの開始行目安
+    SETTINGS: 10         // 設定項目テーブルの開始行目安
   },
   
   // 最大処理行数
@@ -142,46 +141,12 @@ Config.getSettings = function() {
   const priceThreshold = parseFloat(settingsSheet.getRange(valueRow, 4).getValue()) || this.DEFAULT_SETTINGS.PRICE_THRESHOLD;
   const duplicateThreshold = parseInt(settingsSheet.getRange(valueRow, 5).getValue()) || this.DEFAULT_SETTINGS.DUPLICATE_THRESHOLD;
   
-  // 所在地置換パターンテーブルの位置を検索
-  let locationRow = this.SECTION_START.LOCATION_PATTERNS;
-  found = false;
-  
-  while (locationRow <= 100 && !found) {
-    const value = settingsSheet.getRange(locationRow, 1).getValue();
-    if (value === '所在地置換パターン') {
-      found = true;
-      break;
-    }
-    locationRow++;
-  }
-  
-  // 所在地置換パターンを取得
-  let locationPatterns = [];
-  if (found) {
-    // ヘッダー行をスキップ
-    locationRow += 2;
-    while (locationRow <= 100) {
-      const search = settingsSheet.getRange(locationRow, 1).getValue();
-      if (!search || search === '') {
-        break;
-      }
-      
-      locationPatterns.push({
-        search: search,
-        replace: settingsSheet.getRange(locationRow, 2).getValue()
-      });
-      
-      locationRow++;
-    }
-  }
-  
   return {
     ngWords: ngWords.filter(word => word.trim() !== ''),
     characterLimit: characterLimit,
     priceThreshold: priceThreshold,
     duplicateThreshold: duplicateThreshold,
-    ngWordMode: ngWordMode,
-    locationPatterns: locationPatterns
+    ngWordMode: ngWordMode
   };
 };
 
@@ -248,46 +213,6 @@ Config.saveSettings = function(settings) {
     
     if (settings.duplicateThreshold) {
       settingsSheet.getRange(valueRow, 5).setValue(settings.duplicateThreshold);
-    }
-  }
-  
-  // 所在地置換パターンテーブルの位置を検索
-  if (settings.locationPatterns && Array.isArray(settings.locationPatterns)) {
-    let locationRow = this.SECTION_START.LOCATION_PATTERNS;
-    found = false;
-    
-    while (locationRow <= 100 && !found) {
-      const value = settingsSheet.getRange(locationRow, 1).getValue();
-      if (value === '所在地置換パターン') {
-        found = true;
-        break;
-      }
-      locationRow++;
-    }
-    
-    // 所在地置換パターンが見つかった場合、値を更新
-    if (found) {
-      // ヘッダー行をスキップして既存のパターンをクリア
-      locationRow += 2;
-      let clearRow = locationRow;
-      while (clearRow <= 100) {
-        const search = settingsSheet.getRange(clearRow, 1).getValue();
-        if (!search || search === '') {
-          break;
-        }
-        settingsSheet.getRange(clearRow, 1, 1, 3).clearContent();
-        clearRow++;
-      }
-      
-      // 新しいパターンを設定
-      if (settings.locationPatterns.length > 0) {
-        const locationData = settings.locationPatterns.map(pattern => [
-          pattern.search,
-          pattern.replace,
-          pattern.description || ''
-        ]);
-        settingsSheet.getRange(locationRow, 1, locationData.length, 3).setValues(locationData);
-      }
     }
   }
   
