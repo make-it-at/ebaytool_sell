@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+      <?!= UI.getStylesheet(); ?>
+      
+      /* 設定ダイアログ専用スタイル */
+      .settings-tabs {
+        display: flex;
+        border-bottom: 1px solid var(--divider-color);
+        margin-bottom: 20px;
+      }
+      
+      .tab-button {
+        padding: 10px 15px;
+        cursor: pointer;
+        border: none;
+        background: none;
+        font-size: 14px;
+        color: var(--text-secondary);
+        border-bottom: 2px solid transparent;
+        transition: all 0.3s ease;
+      }
+      
+      .tab-button.active {
+        color: var(--primary-color);
+        border-bottom-color: var(--primary-color);
+        font-weight: 500;
+      }
+      
+      .tab-button:hover {
+        color: var(--primary-color);
+      }
+      
+      .tab-content {
+        display: none;
+      }
+      
+      .tab-content.active {
+        display: block;
+      }
+      
+      .form-group textarea {
+        min-height: 100px;
+        resize: vertical;
+      }
+      
+      .form-row {
+        display: flex;
+        gap: 15px;
+        margin-bottom: 15px;
+      }
+      
+      .form-row .form-group {
+        flex: 1;
+        margin-bottom: 0;
+      }
+      
+      .help-text {
+        font-size: 12px;
+        color: var(--text-secondary);
+        margin-top: 5px;
+      }
+      
+      #location-patterns {
+        width: 100%;
+        margin-bottom: 10px;
+      }
+      
+      #location-patterns th {
+        font-weight: 500;
+        text-align: left;
+        padding: 8px;
+      }
+      
+      #location-patterns td {
+        padding: 5px 8px;
+      }
+      
+      #location-patterns .btn {
+        padding: 4px 8px;
+        font-size: 12px;
+      }
+      
+      .add-pattern-btn {
+        display: block;
+        margin-bottom: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="dialog">
+      <div class="dialog-header">
+        <h2><i class="fas fa-cog"></i> 設定</h2>
+        <p>eBay出品ツールの設定を管理します</p>
+      </div>
+      
+      <div id="message-container"></div>
+      
+      <div class="settings-tabs">
+        <button type="button" class="tab-button active" data-tab="basic">基本設定</button>
+        <button type="button" class="tab-button" data-tab="filters">フィルター設定</button>
+        <button type="button" class="tab-button" data-tab="location">所在地設定</button>
+      </div>
+      
+      <form id="settings-form">
+        <!-- 基本設定タブ -->
+        <div id="basic-tab" class="tab-content active">
+          <div class="form-group">
+            <label for="ng-words">NGワードリスト</label>
+            <textarea id="ng-words" class="form-control" placeholder="カンマ区切りでNGワードを入力"><?!= Config.getSettings().ngWords.join(',') ?></textarea>
+            <p class="help-text">商品名に含まれていると除外するワードをカンマ区切りで入力してください</p>
+          </div>
+          
+          <div class="form-group">
+            <label for="ng-word-mode">NGワード処理モード</label>
+            <select id="ng-word-mode" class="form-control">
+              <option value="リスト全削除" <?= Config.getSettings().ngWordMode === 'リスト全削除' ? 'selected' : '' ?>>リスト全削除（NGワードを含む商品を完全に削除）</option>
+              <option value="部分削除モード" <?= Config.getSettings().ngWordMode === '部分削除モード' ? 'selected' : '' ?>>部分削除モード（NGワードのみを削除）</option>
+            </select>
+            <p class="help-text">NGワードを含む商品の処理方法を選択してください</p>
+          </div>
+        </div>
+        
+        <!-- フィルター設定タブ -->
+        <div id="filters-tab" class="tab-content">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="character-limit">商品名文字数制限</label>
+              <input type="number" id="character-limit" class="form-control" min="1" max="100" value="<?!= Config.getSettings().characterLimit ?>" required>
+              <p class="help-text">この文字数未満の商品名は除外されます</p>
+            </div>
+            
+            <div class="form-group">
+              <label for="price-threshold">価格下限（ドル）</label>
+              <input type="number" id="price-threshold" class="form-control" min="0" step="0.01" value="<?!= Config.getSettings().priceThreshold ?>" required>
+              <p class="help-text">この価格以下の商品は除外されます</p>
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label for="duplicate-threshold">重複検出閾値（%）</label>
+            <input type="number" id="duplicate-threshold" class="form-control" min="1" max="100" value="<?!= Config.getSettings().duplicateThreshold ?>" required>
+            <p class="help-text">商品名の類似度がこの値以上の場合に重複と判定します</p>
+          </div>
+        </div>
+        
+        <!-- 所在地設定タブ -->
+        <div id="location-tab" class="tab-content">
+          <h3>所在地置換パターン</h3>
+          <p class="help-text">正規表現で検索文字列と置換文字列を指定できます</p>
+          
+          <table id="location-patterns">
+            <thead>
+              <tr>
+                <th>検索</th>
+                <th>置換</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <? const locationPatterns = Config.getSettings().locationPatterns; ?>
+              <? for (let i = 0; i < locationPatterns.length; i++) { ?>
+                <tr>
+                  <td><input type="text" class="form-control pattern-search" value="<?= locationPatterns[i].search ?>" placeholder="検索"></td>
+                  <td><input type="text" class="form-control pattern-replace" value="<?= locationPatterns[i].replace ?>" placeholder="置換"></td>
+                  <td>
+                    <button type="button" class="btn btn-outline" onclick="removeLocationPattern(this)">
+                      <i class="fas fa-trash"></i>
+                    </button>
+                  </td>
+                </tr>
+              <? } ?>
+              <? if (locationPatterns.length === 0) { ?>
+                <tr>
+                  <td><input type="text" class="form-control pattern-search" placeholder="検索"></td>
+                  <td><input type="text" class="form-control pattern-replace" placeholder="置換"></td>
+                  <td>
+                    <button type="button" class="btn btn-outline" onclick="removeLocationPattern(this)">
+                      <i class="fas fa-trash"></i>
+                    </button>
+                  </td>
+                </tr>
+              <? } ?>
+            </tbody>
+          </table>
+          
+          <button type="button" class="btn btn-outline add-pattern-btn" onclick="addLocationPattern()">
+            <i class="fas fa-plus"></i> パターンを追加
+          </button>
+          
+          <div class="alert alert-info">
+            <p><strong>ヒント:</strong> パターンの適用順序は上から順です。正規表現が使用できます。</p>
+            <p>例: <code>[0-9]+</code> → <code></code> （数字を削除）</p>
+          </div>
+        </div>
+        
+        <div class="dialog-footer">
+          <button type="button" class="btn btn-outline" onclick="google.script.host.close()">
+            キャンセル
+          </button>
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save"></i> 保存
+          </button>
+        </div>
+      </form>
+    </div>
+    
+    <script>
+      <?!= UI.getJavaScript(); ?>
+      
+      // タブ切り替え
+      document.addEventListener('DOMContentLoaded', function() {
+        const tabButtons = document.querySelectorAll('.tab-button');
+        
+        tabButtons.forEach(function(button) {
+          button.addEventListener('click', function() {
+            // アクティブクラスを削除
+            document.querySelectorAll('.tab-button').forEach(function(btn) {
+              btn.classList.remove('active');
+            });
+            document.querySelectorAll('.tab-content').forEach(function(content) {
+              content.classList.remove('active');
+            });
+            
+            // 選択したタブとコンテンツを表示
+            const tabId = this.getAttribute('data-tab');
+            this.classList.add('active');
+            document.getElementById(tabId + '-tab').classList.add('active');
+          });
+        });
+      });
+      
+      // 設定フォームの送信
+      document.getElementById('settings-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        // 入力値の検証
+        const characterLimit = document.getElementById('character-limit').value;
+        const priceThreshold = document.getElementById('price-threshold').value;
+        const duplicateThreshold = document.getElementById('duplicate-threshold').value;
+        
+        if (!characterLimit || isNaN(characterLimit) || characterLimit < 1) {
+          showMessage('error', '文字数制限は1以上の数値を入力してください');
+          return;
+        }
+        
+        if (!priceThreshold || isNaN(priceThreshold) || priceThreshold < 0) {
+          showMessage('error', '価格下限は0以上の数値を入力してください');
+          return;
+        }
+        
+        if (!duplicateThreshold || isNaN(duplicateThreshold) || duplicateThreshold < 1 || duplicateThreshold > 100) {
+          showMessage('error', '重複検出閾値は1〜100の間で入力してください');
+          return;
+        }
+        
+        // 設定オブジェクトの作成
+        const settings = {
+          ngWords: document.getElementById('ng-words').value.split(',').map(word => word.trim()).filter(word => word !== ''),
+          characterLimit: parseInt(characterLimit),
+          priceThreshold: parseFloat(priceThreshold),
+          duplicateThreshold: parseInt(duplicateThreshold),
+          ngWordMode: document.getElementById('ng-word-mode').value,
+          locationPatterns: []
+        };
+        
+        // 所在地置換パターンの取得
+        const patternRows = document.querySelectorAll('#location-patterns tbody tr');
+        patternRows.forEach(function(row) {
+          const searchInput = row.querySelector('.pattern-search');
+          const replaceInput = row.querySelector('.pattern-replace');
+          
+          if (searchInput && replaceInput && searchInput.value.trim() !== '') {
+            settings.locationPatterns.push({
+              search: searchInput.value.trim(),
+              replace: replaceInput.value.trim()
+            });
+          }
+        });
+        
+        // 保存中メッセージを表示
+        showMessage('info', '設定を保存しています...');
+        
+        // 設定を保存
+        google.script.run
+          .withSuccessHandler(function(result) {
+            if (result) {
+              showMessage('success', '設定が保存されました');
+              // 2秒後にダイアログを閉じる
+              setTimeout(function() {
+                google.script.host.close();
+              }, 2000);
+            } else {
+              showMessage('error', '設定の保存中にエラーが発生しました');
+            }
+          })
+          .withFailureHandler(function(error) {
+            showMessage('error', 'エラー: ' + error.message);
+          })
+          .Config.saveSettings(settings);
+      });
+    </script>
+  </body>
+</html> 

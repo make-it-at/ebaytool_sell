@@ -75,9 +75,6 @@ Filters.runNgWordFilter = function() {
       throw new Error('Title列が見つかりません。ヘッダー行に「Title」が含まれているか確認してください。');
     }
     
-    // 処理結果列のインデックスを取得（なければ追加）
-    const resultColumnIndex = headerRow.indexOf('処理結果');
-    
     // 設定を取得
     const settings = Config.getSettings();
     const ngWords = settings.ngWords;
@@ -134,20 +131,6 @@ Filters.runNgWordFilter = function() {
         if (ngWordMode === '部分削除モード' && containsNgWord) {
           newRow[titleColumnIndex] = processedTitle;
           Logger.log(`NGワード部分削除: "${title}" → "${processedTitle}", 一致NGワード: ${matchedNgWords.join(', ')}`);
-          
-          // 処理結果列がある場合は更新
-          if (resultColumnIndex >= 0) {
-            newRow[resultColumnIndex] = 'NGワード部分削除';
-          } else {
-            newRow.push('NGワード部分削除');
-          }
-        } else {
-          // 処理結果列がある場合は更新
-          if (resultColumnIndex >= 0) {
-            newRow[resultColumnIndex] = 'OK';
-          } else {
-            newRow.push('OK');
-          }
         }
         
         resultData.push([index + 2, newRow]); // 行番号と新しい行データを保存
@@ -219,9 +202,6 @@ Filters.runDuplicateCheck = function() {
     const headerRow = values[0];
     const dataRows = values.slice(1);
     
-    // 処理結果列のインデックスを取得（なければ追加）
-    const resultColumnIndex = headerRow.indexOf('処理結果');
-    
     // 設定を取得
     const settings = Config.getSettings();
     const duplicateThreshold = settings.duplicateThreshold;
@@ -229,14 +209,14 @@ Filters.runDuplicateCheck = function() {
     // 重複チェック結果の準備
     let rowsToDelete = [];
     
-    // タイトルごとの類似度計算
+    // 一つ目のループは固定する行
     for (let i = 0; i < dataRows.length; i++) {
       // 処理の進捗状況を更新（10%単位）
       if (i % Math.floor(Math.max(dataRows.length, 10) / 10) === 0) {
         UI.updateProgressBar(Math.floor((i / Math.max(dataRows.length, 1)) * 100));
       }
       
-      // すでに削除対象として記録されている行はスキップ
+      // すでに削除対象になっている行はスキップ
       if (rowsToDelete.includes(i + 2)) continue;
       
       const title1 = dataRows[i][0]; // 商品名
@@ -263,23 +243,6 @@ Filters.runDuplicateCheck = function() {
       rowsToDelete.sort((a, b) => b - a); // 降順にソート
       for (const rowIndex of rowsToDelete) {
         listingSheet.deleteRow(rowIndex);
-      }
-    }
-    
-    // 残った行に処理結果を更新
-    if (resultColumnIndex >= 0) {
-      const lastRow = listingSheet.getLastRow();
-      if (lastRow > 1) { // ヘッダー行より下に行が存在する場合
-        const resultRange = listingSheet.getRange(2, resultColumnIndex + 1, lastRow - 1, 1);
-        const currentValues = resultRange.getValues();
-        
-        // 各行の処理結果を「OK」または既存値+「重複チェック完了」に更新
-        const newValues = currentValues.map(([value]) => {
-          if (!value) return ['OK'];
-          return [value + ', 重複チェック完了'];
-        });
-        
-        resultRange.setValues(newValues);
       }
     }
     
@@ -367,8 +330,11 @@ Filters.runLengthFilter = function() {
     const headerRow = values[0];
     const dataRows = values.slice(1);
     
-    // 処理結果列のインデックスを取得（なければ追加）
-    const resultColumnIndex = headerRow.indexOf('処理結果');
+    // Title列のインデックスを取得
+    const titleColumnIndex = headerRow.indexOf('Title');
+    if (titleColumnIndex === -1) {
+      throw new Error('Title列が見つかりません。ヘッダー行に「Title」が含まれているか確認してください。');
+    }
     
     // 設定を取得
     const settings = Config.getSettings();
@@ -384,10 +350,10 @@ Filters.runLengthFilter = function() {
         UI.updateProgressBar(Math.floor((index / Math.max(dataRows.length, 1)) * 100));
       }
       
-      const title = row[0]; // 商品名
+      const title = row[titleColumnIndex]; // Title列の値
       
       // 文字数チェック
-      if (title.length < characterLimit) {
+      if (title.length <= characterLimit) {
         rowsToDelete.push(index + 2); // +2 は1-indexedと、ヘッダー行をスキップするため
         Logger.log(`文字数不足のためスキップ: "${title}" (${title.length}文字)`);
       }
@@ -399,23 +365,6 @@ Filters.runLengthFilter = function() {
       rowsToDelete.sort((a, b) => b - a); // 降順にソート
       for (const rowIndex of rowsToDelete) {
         listingSheet.deleteRow(rowIndex);
-      }
-    }
-    
-    // 残った行に処理結果を更新
-    if (resultColumnIndex >= 0) {
-      const lastRow = listingSheet.getLastRow();
-      if (lastRow > 1) { // ヘッダー行より下に行が存在する場合
-        const resultRange = listingSheet.getRange(2, resultColumnIndex + 1, lastRow - 1, 1);
-        const currentValues = resultRange.getValues();
-        
-        // 各行の処理結果を「OK」または既存値+「文字数OK」に更新
-        const newValues = currentValues.map(([value]) => {
-          if (!value) return ['OK'];
-          return [value + ', 文字数OK'];
-        });
-        
-        resultRange.setValues(newValues);
       }
     }
     
@@ -455,9 +404,6 @@ Filters.runLocationFix = function() {
     // ヘッダー行をスキップ
     const headerRow = values[0];
     const dataRows = values.slice(1);
-    
-    // 処理結果列のインデックスを取得（なければ追加）
-    const resultColumnIndex = headerRow.indexOf('処理結果');
     
     // Locationカラムのインデックスを取得（ヘッダーから位置を特定）
     let locationColumnIndex = headerRow.indexOf('所在地');
@@ -524,23 +470,6 @@ Filters.runLocationFix = function() {
       }
     });
     
-    // 処理結果列を更新
-    if (resultColumnIndex >= 0) {
-      const lastRow = listingSheet.getLastRow();
-      if (lastRow > 1) { // ヘッダー行より下に行が存在する場合
-        const resultRange = listingSheet.getRange(2, resultColumnIndex + 1, lastRow - 1, 1);
-        const currentValues = resultRange.getValues();
-        
-        // 各行の処理結果を「OK」または既存値+「所在地修正完了」に更新
-        const newValues = currentValues.map(([value]) => {
-          if (!value) return ['OK'];
-          return [value + ', 所在地修正完了'];
-        });
-        
-        resultRange.setValues(newValues);
-      }
-    }
-    
     UI.updateProgressBar(100);
     
     UI.showSuccessMessage(`所在地情報の修正が完了しました。${updatedLocations.length}件の所在地情報を修正しました。`);
@@ -580,8 +509,11 @@ Filters.runPriceFilter = function() {
     const headerRow = values[0];
     const dataRows = values.slice(1);
     
-    // 処理結果列のインデックスを取得（なければ追加）
-    const resultColumnIndex = headerRow.indexOf('処理結果');
+    // StartPrice列のインデックスを取得
+    const priceColumnIndex = headerRow.indexOf('StartPrice');
+    if (priceColumnIndex === -1) {
+      throw new Error('StartPrice列が見つかりません。ヘッダー行に「StartPrice」が含まれているか確認してください。');
+    }
     
     // 設定を取得
     const settings = Config.getSettings();
@@ -597,7 +529,7 @@ Filters.runPriceFilter = function() {
         UI.updateProgressBar(Math.floor((index / Math.max(dataRows.length, 1)) * 100));
       }
       
-      const price = parseFloat(row[1]); // 価格($)
+      const price = parseFloat(row[priceColumnIndex]); // StartPrice列の値
       
       // 価格チェック
       if (isNaN(price) || price <= priceThreshold) {
@@ -612,23 +544,6 @@ Filters.runPriceFilter = function() {
       rowsToDelete.sort((a, b) => b - a); // 降順にソート
       for (const rowIndex of rowsToDelete) {
         listingSheet.deleteRow(rowIndex);
-      }
-    }
-    
-    // 残った行に処理結果を更新
-    if (resultColumnIndex >= 0) {
-      const lastRow = listingSheet.getLastRow();
-      if (lastRow > 1) { // ヘッダー行より下に行が存在する場合
-        const resultRange = listingSheet.getRange(2, resultColumnIndex + 1, lastRow - 1, 1);
-        const currentValues = resultRange.getValues();
-        
-        // 各行の処理結果を「OK」または既存値+「価格OK」に更新
-        const newValues = currentValues.map(([value]) => {
-          if (!value) return ['OK'];
-          return [value + ', 価格OK'];
-        });
-        
-        resultRange.setValues(newValues);
       }
     }
     

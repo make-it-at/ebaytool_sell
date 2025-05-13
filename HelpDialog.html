@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+      <?!= UI.getStylesheet(); ?>
+      
+      /* ヘルプダイアログ専用スタイル */
+      .help-tabs {
+        display: flex;
+        border-bottom: 1px solid var(--divider-color);
+        margin-bottom: 20px;
+        overflow-x: auto;
+      }
+      
+      .tab-button {
+        padding: 10px 15px;
+        cursor: pointer;
+        border: none;
+        background: none;
+        font-size: 14px;
+        color: var(--text-secondary);
+        border-bottom: 2px solid transparent;
+        transition: all 0.3s ease;
+        white-space: nowrap;
+      }
+      
+      .tab-button.active {
+        color: var(--primary-color);
+        border-bottom-color: var(--primary-color);
+        font-weight: 500;
+      }
+      
+      .tab-button:hover {
+        color: var(--primary-color);
+      }
+      
+      .tab-content {
+        display: none;
+        padding: 10px 0;
+      }
+      
+      .tab-content.active {
+        display: block;
+      }
+      
+      .help-section {
+        margin-bottom: 25px;
+      }
+      
+      .help-section h3 {
+        color: var(--primary-color);
+        font-size: 16px;
+        margin-bottom: 10px;
+        border-left: 3px solid var(--primary-color);
+        padding-left: 10px;
+      }
+      
+      .help-section p {
+        margin-bottom: 10px;
+        line-height: 1.6;
+      }
+      
+      .help-section ul, .help-section ol {
+        padding-left: 20px;
+        margin-bottom: 15px;
+      }
+      
+      .help-section li {
+        margin-bottom: 5px;
+      }
+      
+      .note {
+        background-color: rgba(33, 150, 243, 0.1);
+        border-left: 4px solid var(--info-color);
+        padding: 10px 15px;
+        margin-bottom: 15px;
+        border-radius: 4px;
+      }
+      
+      .note strong {
+        color: var(--info-color);
+      }
+      
+      .tip {
+        background-color: rgba(76, 175, 80, 0.1);
+        border-left: 4px solid var(--success-color);
+        padding: 10px 15px;
+        margin-bottom: 15px;
+        border-radius: 4px;
+      }
+      
+      .tip strong {
+        color: var(--success-color);
+      }
+      
+      .warning {
+        background-color: rgba(255, 193, 7, 0.1);
+        border-left: 4px solid var(--warning-color);
+        padding: 10px 15px;
+        margin-bottom: 15px;
+        border-radius: 4px;
+      }
+      
+      .warning strong {
+        color: var(--warning-color);
+      }
+      
+      code {
+        background-color: rgba(0, 0, 0, 0.05);
+        padding: 2px 5px;
+        border-radius: 3px;
+        font-family: monospace;
+      }
+      
+      .version-info {
+        text-align: center;
+        margin-top: 30px;
+        padding-top: 15px;
+        border-top: 1px solid var(--divider-color);
+        font-size: 12px;
+        color: var(--text-secondary);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="dialog">
+      <div class="dialog-header">
+        <h2><i class="fas fa-question-circle"></i> ヘルプ</h2>
+        <p>eBay出品ツールの使い方ガイド</p>
+      </div>
+      
+      <div class="help-tabs">
+        <button type="button" class="tab-button active" data-tab="overview">概要</button>
+        <button type="button" class="tab-button" data-tab="import-export">インポート/エクスポート</button>
+        <button type="button" class="tab-button" data-tab="filters">フィルター処理</button>
+        <button type="button" class="tab-button" data-tab="settings">設定</button>
+        <button type="button" class="tab-button" data-tab="tips">使用上のヒント</button>
+      </div>
+      
+      <!-- 概要タブ -->
+      <div id="overview-tab" class="tab-content active">
+        <div class="help-section">
+          <h3>eBay出品ツールとは</h3>
+          <p>このツールは、リサーチデータからeBay出品するまでの作業を効率化するためのGoogle Apps Scriptベースのアプリケーションです。商品名のフィルタリング、重複チェック、所在地情報の修正など、出品作業を迅速かつ正確に行うための機能を提供します。</p>
+        </div>
+        
+        <div class="help-section">
+          <h3>基本的な使い方</h3>
+          <ol>
+            <li>リサーチデータをCSVでインポート</li>
+            <li>各種フィルターで商品をクリーニング
+              <ul>
+                <li>NGワードフィルタリング</li>
+                <li>重複チェック</li>
+                <li>文字数制限フィルタリング</li>
+                <li>所在地情報修正</li>
+                <li>価格フィルタリング</li>
+              </ul>
+            </li>
+            <li>処理結果をeBay形式にエクスポート</li>
+            <li>エクスポートしたCSVをeBayの一括アップロードツールで使用</li>
+          </ol>
+        </div>
+        
+        <div class="help-section">
+          <h3>シート構成</h3>
+          <ul>
+            <li><strong>データインポート</strong>: CSVからインポートしたデータを表示するシート</li>
+            <li><strong>処理結果</strong>: フィルター処理後のデータを表示するシート</li>
+            <li><strong>エクスポート</strong>: eBay形式に整形されたデータを表示するシート</li>
+            <li><strong>設定</strong>: NGワードリスト、閾値などの設定を管理するシート</li>
+            <li><strong>ログ</strong>: 処理ログを記録するシート</li>
+          </ul>
+        </div>
+        
+        <div class="tip">
+          <p><strong>ヒント:</strong> メニューバーの「eBayツール」から各機能にアクセスすることもできます。サイドバーから実行すると進捗状況が表示されます。</p>
+        </div>
+      </div>
+      
+      <!-- インポート/エクスポートタブ -->
+      <div id="import-export-tab" class="tab-content">
+        <div class="help-section">
+          <h3>CSVインポート</h3>
+          <p>リサーチツールからエクスポートしたCSVデータをインポートします。</p>
+          <ol>
+            <li>サイドバーまたはメニューの「CSVインポート」をクリック</li>
+            <li>CSVファイルを選択（サイズ上限: 10MB）</li>
+            <li>「インポート」ボタンをクリック</li>
+          </ol>
+          <p>インポートが完了すると、データが「データインポート」シートに表示されます。</p>
+        </div>
+        
+        <div class="help-section">
+          <h3>CSVエクスポート</h3>
+          <p>処理済みデータをeBayの一括アップロード形式でエクスポートします。</p>
+          <ol>
+            <li>フィルター処理を完了させる</li>
+            <li>サイドバーまたはメニューの「CSVエクスポート」をクリック</li>
+            <li>「エクスポート」ボタンをクリック</li>
+            <li>生成されたCSVファイルをダウンロード</li>
+          </ol>
+          <p>エクスポートされたCSVファイルはeBayの一括アップロードツールで直接使用できます。</p>
+        </div>
+        
+        <div class="note">
+          <p><strong>注意:</strong> エクスポート時にはGoogle Driveにファイルが一時的に保存され、ダウンロード用リンクが表示されます。このリンクは一定期間後に無効になる可能性があります。</p>
+        </div>
+      </div>
+      
+      <!-- フィルター処理タブ -->
+      <div id="filters-tab" class="tab-content">
+        <div class="help-section">
+          <h3>NGワードフィルタリング</h3>
+          <p>設定されたNGワードを含む商品をフィルタリングします。</p>
+          <p>モードの種類:</p>
+          <ul>
+            <li><strong>リスト全削除</strong>: NGワードを含む商品を完全に削除</li>
+            <li><strong>部分削除モード</strong>: 商品名からNGワードのみを削除</li>
+          </ul>
+        </div>
+        
+        <div class="help-section">
+          <h3>重複チェック</h3>
+          <p>類似度に基づいて商品名の重複をチェックし、重複項目を除外します。</p>
+          <p>重複判定は文字列の類似度（レーベンシュタイン距離）に基づいて行われます。類似度のしきい値は設定で調整できます。</p>
+        </div>
+        
+        <div class="help-section">
+          <h3>文字数制限フィルタリング</h3>
+          <p>設定された文字数より短い商品名を持つ商品を除外します。</p>
+          <p>デフォルトの文字数制限は20文字です。この値は設定で変更できます。</p>
+        </div>
+        
+        <div class="help-section">
+          <h3>所在地情報修正</h3>
+          <p>正規表現を使用して所在地情報を修正します。</p>
+          <p>よくある修正例:</p>
+          <ul>
+            <li>数字の除去: <code>[0-9]+</code> → <code></code></li>
+            <li>都市名の翻訳: <code>tokyo</code> → <code>東京</code></li>
+          </ul>
+        </div>
+        
+        <div class="help-section">
+          <h3>価格フィルタリング</h3>
+          <p>設定された価格しきい値以下の商品を除外します。</p>
+          <p>デフォルトの価格しきい値は10ドルです。この値は設定で変更できます。</p>
+        </div>
+        
+        <div class="help-section">
+          <h3>全処理一括実行</h3>
+          <p>すべてのフィルター処理を順番に自動実行します。</p>
+          <p>実行順序: NGワード → 重複チェック → 文字数制限 → 所在地修正 → 価格フィルター</p>
+        </div>
+      </div>
+      
+      <!-- 設定タブ -->
+      <div id="settings-tab" class="tab-content">
+        <div class="help-section">
+          <h3>NGワードリスト</h3>
+          <p>フィルタリング対象のNGワードをカンマ区切りで設定します。</p>
+          <p>例: <code>fake,replica,copy,used,broken</code></p>
+        </div>
+        
+        <div class="help-section">
+          <h3>文字数制限</h3>
+          <p>商品名の最小文字数を設定します。これより短い商品名を持つ商品は除外されます。</p>
+          <p>適切な値は通常15〜25文字の間です。</p>
+        </div>
+        
+        <div class="help-section">
+          <h3>価格下限</h3>
+          <p>商品の最低価格（ドル）を設定します。これより安い商品は除外されます。</p>
+        </div>
+        
+        <div class="help-section">
+          <h3>重複類似度閾値</h3>
+          <p>商品名の類似度がこの値（%）以上の場合に重複と判定します。</p>
+          <p>80〜90%の値が一般的ですが、より厳密に重複をチェックする場合は高い値を設定します。</p>
+        </div>
+        
+        <div class="help-section">
+          <h3>所在地置換パターン</h3>
+          <p>所在地情報の検索と置換パターンを設定します。正規表現が使用できます。</p>
+          <p>パターンは上から順に適用されます。</p>
+        </div>
+      </div>
+      
+      <!-- 使用上のヒントタブ -->
+      <div id="tips-tab" class="tab-content">
+        <div class="help-section">
+          <h3>効率的な使い方</h3>
+          <ul>
+            <li>大量のデータを処理する場合は、一度に全処理を実行するよりも、各フィルターを順番に適用してく方が効率的な場合があります。</li>
+            <li>NGワードリストは定期的に更新して、よく見かける除外すべきキーワードを追加しましょう。</li>
+            <li>処理結果シートでは、各行の処理結果を確認できます。特定の処理で問題が発生した場合に役立ちます。</li>
+          </ul>
+        </div>
+        
+        <div class="help-section">
+          <h3>トラブルシューティング</h3>
+          <ul>
+            <li><strong>インポートに失敗する場合:</strong> CSVファイルの形式やエンコーディングを確認してください。UTF-8形式が推奨されます。</li>
+            <li><strong>処理が遅い場合:</strong> 一度に処理する行数を減らしてみてください。Google Apps Scriptには処理時間の制限があります。</li>
+            <li><strong>エラーが発生した場合:</strong> ログシートでエラーメッセージを確認し、問題を特定してください。</li>
+          </ul>
+        </div>
+        
+        <div class="help-section">
+          <h3>正規表現の使用例</h3>
+          <p>所在地置換パターンでよく使われる正規表現の例:</p>
+          <ul>
+            <li>数字の削除: <code>[0-9]+</code> → <code></code></li>
+            <li>特定の文字列の置換: <code>japan</code> → <code>日本</code></li>
+            <li>複数のスペースを1つに: <code>\s+</code> → <code> </code></li>
+            <li>括弧内の文字列を削除: <code>\(.*?\)</code> → <code></code></li>
+          </ul>
+        </div>
+        
+        <div class="warning">
+          <p><strong>注意:</strong> 大量のデータ（数千行以上）を処理する場合、Google Apps Scriptの実行時間制限に達する可能性があります。その場合は、データを分割して処理することをお勧めします。</p>
+        </div>
+      </div>
+      
+      <div class="version-info">
+        <p>eBay出品ツール バージョン 1.0.0</p>
+        <p>© 2023 All Rights Reserved</p>
+      </div>
+    </div>
+    
+    <script>
+      // タブ切り替え
+      document.addEventListener('DOMContentLoaded', function() {
+        const tabButtons = document.querySelectorAll('.tab-button');
+        
+        tabButtons.forEach(function(button) {
+          button.addEventListener('click', function() {
+            // アクティブクラスを削除
+            document.querySelectorAll('.tab-button').forEach(function(btn) {
+              btn.classList.remove('active');
+            });
+            document.querySelectorAll('.tab-content').forEach(function(content) {
+              content.classList.remove('active');
+            });
+            
+            // 選択したタブとコンテンツを表示
+            const tabId = this.getAttribute('data-tab');
+            this.classList.add('active');
+            document.getElementById(tabId + '-tab').classList.add('active');
+          });
+        });
+      });
+    </script>
+  </body>
+</html> 

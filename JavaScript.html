@@ -1,0 +1,286 @@
+/**
+ * eBay出品作業効率化ツール - 共通JavaScript
+ * 
+ * HTMLテンプレートに埋め込む共通のJavaScript関数を定義します。
+ */
+
+// ドキュメント読み込み完了時の処理
+document.addEventListener('DOMContentLoaded', function() {
+  // フォントAwesomeのCDNが読み込まれていない場合の対策
+  if (typeof FontAwesome === 'undefined') {
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css';
+    document.head.appendChild(link);
+  }
+  
+  // イベントリスナーの初期化
+  initEventListeners();
+  
+  // サイドバー初期化
+  document.querySelector('.footer').textContent = 'eBay出品作業効率化ツール <?= version ?>';
+});
+
+// イベントリスナーの初期化
+function initEventListeners() {
+  // フォーム送信イベントの処理
+  const forms = document.querySelectorAll('form');
+  
+  forms.forEach(function(form) {
+    form.addEventListener('submit', function(event) {
+      event.preventDefault();
+      
+      const formId = form.id;
+      
+      if (formId === 'import-form') {
+        handleImport();
+      } else if (formId === 'export-form') {
+        handleExport();
+      } else if (formId === 'settings-form') {
+        saveSettings();
+      }
+    });
+  });
+}
+
+// ファイルインポート処理
+function handleImport() {
+  const fileInput = document.getElementById('csv-file');
+  const file = fileInput.files[0];
+  
+  if (!file) {
+    showMessage('error', 'ファイルを選択してください。');
+    return;
+  }
+  
+  // ファイル形式の検証
+  if (file.type !== 'text/csv' && !file.name.endsWith('.csv')) {
+    showMessage('error', 'CSVファイルを選択してください。');
+    return;
+  }
+  
+  // ファイルサイズの検証（10MB以下）
+  if (file.size > 10 * 1024 * 1024) {
+    showMessage('error', 'ファイルサイズが大きすぎます。10MB以下のファイルを選択してください。');
+    return;
+  }
+  
+  // アップロードメッセージを表示
+  showMessage('info', 'ファイルをアップロード中...');
+  
+  // ファイルをGoogle Apps Scriptに送信
+  const fr = new FileReader();
+  
+  fr.onload = function(e) {
+    const content = e.target.result;
+    
+    // Base64エンコード（クライアント側で行う）
+    let contentBase64;
+    try {
+      // Unicodeの文字列をバイナリ表現に変換してからエンコード
+      const unicodeToUtf8 = unescape(encodeURIComponent(content));
+      contentBase64 = btoa(unicodeToUtf8);
+    } catch (error) {
+      showMessage('error', 'ファイルのエンコードに失敗しました。テキスト形式のCSVファイルを選択してください。');
+      return;
+    }
+    
+    // Google Apps Scriptに送信
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (result) {
+          showMessage('success', 'ファイルがインポートされました。');
+          // ダイアログを閉じる
+          setTimeout(function() {
+            google.script.host.close();
+          }, 2000);
+        } else {
+          showMessage('error', 'インポート中にエラーが発生しました。');
+        }
+      })
+      .withFailureHandler(function(error) {
+        showMessage('error', 'エラー: ' + error.message);
+      })
+      .importCsvFromBase64(contentBase64);
+  };
+  
+  fr.onerror = function() {
+    showMessage('error', 'ファイルの読み込み中にエラーが発生しました。');
+  };
+  
+  fr.readAsText(file);
+}
+
+// エクスポート処理
+function handleExport() {
+  // エクスポートボタンを無効化
+  const exportButton = document.getElementById('export-button');
+  if (exportButton) {
+    exportButton.disabled = true;
+    exportButton.textContent = 'エクスポート中...';
+  }
+  
+  // エクスポート処理を実行
+  google.script.run
+    .withSuccessHandler(function(downloadUrl) {
+      if (downloadUrl) {
+        // ダウンロードリンクを表示
+        const downloadContainer = document.getElementById('download-container');
+        if (downloadContainer) {
+          downloadContainer.innerHTML = `
+            <div class="alert alert-success">
+              <p>CSVファイルのエクスポートが完了しました。</p>
+              <a href="${downloadUrl}" target="_blank" class="btn btn-primary">
+                <i class="fas fa-download"></i> ダウンロード
+              </a>
+            </div>
+          `;
+        }
+      } else {
+        showMessage('error', 'エクスポート中にエラーが発生しました。');
+      }
+      
+      // ボタンを元に戻す
+      if (exportButton) {
+        exportButton.disabled = false;
+        exportButton.textContent = 'エクスポート';
+      }
+    })
+    .withFailureHandler(function(error) {
+      showMessage('error', 'エラー: ' + (error.message || '不明なエラー'));
+      
+      // ボタンを元に戻す
+      if (exportButton) {
+        exportButton.disabled = false;
+        exportButton.textContent = 'エクスポート';
+      }
+    })
+    .exportToCsv();
+}
+
+// 設定の保存処理
+function saveSettings() {
+  // フォームの値を取得
+  const ngWordsInput = document.getElementById('ng-words');
+  const characterLimitInput = document.getElementById('character-limit');
+  const priceThresholdInput = document.getElementById('price-threshold');
+  const duplicateThresholdInput = document.getElementById('duplicate-threshold');
+  const ngWordModeSelect = document.getElementById('ng-word-mode');
+  
+  // 入力値の検証
+  if (!characterLimitInput.checkValidity() ||
+      !priceThresholdInput.checkValidity() ||
+      !duplicateThresholdInput.checkValidity()) {
+    showMessage('error', '入力値を確認してください。');
+    return;
+  }
+  
+  // 設定オブジェクトの作成
+  const settings = {
+    ngWords: ngWordsInput.value.split(',').map(word => word.trim()),
+    characterLimit: parseInt(characterLimitInput.value),
+    priceThreshold: parseFloat(priceThresholdInput.value),
+    duplicateThreshold: parseInt(duplicateThresholdInput.value),
+    ngWordMode: ngWordModeSelect.value
+  };
+  
+  // 所在地置換パターンの取得
+  const locationPatternsTable = document.getElementById('location-patterns');
+  if (locationPatternsTable) {
+    const rows = locationPatternsTable.querySelectorAll('tbody tr');
+    const locationPatterns = [];
+    
+    rows.forEach(function(row) {
+      const searchInput = row.querySelector('.pattern-search');
+      const replaceInput = row.querySelector('.pattern-replace');
+      
+      if (searchInput && replaceInput && searchInput.value.trim() !== '') {
+        locationPatterns.push({
+          search: searchInput.value.trim(),
+          replace: replaceInput.value.trim()
+        });
+      }
+    });
+    
+    settings.locationPatterns = locationPatterns;
+  }
+  
+  // Google Apps Scriptに設定を送信
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (result) {
+        showMessage('success', '設定が保存されました。');
+        // ダイアログを閉じる
+        setTimeout(function() {
+          google.script.host.close();
+        }, 2000);
+      } else {
+        showMessage('error', '設定の保存中にエラーが発生しました。');
+      }
+    })
+    .withFailureHandler(function(error) {
+      showMessage('error', 'エラー: ' + error.message);
+    })
+    .Config.saveSettings(settings);
+}
+
+// メッセージ表示
+function showMessage(type, message) {
+  const messageContainer = document.getElementById('message-container');
+  if (!messageContainer) return;
+  
+  const alertClass = type === 'error' ? 'alert-error' :
+                     type === 'success' ? 'alert-success' :
+                     'alert-info';
+  
+  messageContainer.innerHTML = `
+    <div class="alert ${alertClass}">
+      <p>${message}</p>
+    </div>
+  `;
+  
+  // 一定時間後にメッセージを消す（エラーメッセージ以外）
+  if (type !== 'error') {
+    setTimeout(function() {
+      messageContainer.innerHTML = '';
+    }, 5000);
+  }
+}
+
+// 所在地置換パターン行の追加
+function addLocationPattern() {
+  const tbody = document.querySelector('#location-patterns tbody');
+  if (!tbody) return;
+  
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td><input type="text" class="form-control pattern-search" placeholder="検索"></td>
+    <td><input type="text" class="form-control pattern-replace" placeholder="置換"></td>
+    <td>
+      <button type="button" class="btn btn-outline" onclick="removeLocationPattern(this)">
+        <i class="fas fa-trash"></i>
+      </button>
+    </td>
+  `;
+  
+  tbody.appendChild(tr);
+}
+
+// 所在地置換パターン行の削除
+function removeLocationPattern(button) {
+  const tr = button.closest('tr');
+  if (tr) {
+    tr.remove();
+  }
+}
+
+// 日付をフォーマットする
+function formatDate(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  
+  return `${year}-${month}-${day} ${hours}:${minutes}`;
+} 

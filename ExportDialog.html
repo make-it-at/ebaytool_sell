@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+      <?!= UI.getStylesheet(); ?>
+      
+      /* エクスポートダイアログ専用スタイル */
+      .export-info {
+        background-color: rgba(76, 175, 80, 0.05);
+        border-left: 4px solid var(--primary-color);
+        padding: 15px;
+        margin-bottom: 20px;
+        border-radius: 4px;
+      }
+      
+      .export-info h3 {
+        color: var(--primary-color);
+        margin-bottom: 10px;
+      }
+      
+      .export-info ul {
+        padding-left: 20px;
+      }
+      
+      .export-info li {
+        margin-bottom: 5px;
+      }
+      
+      .alert {
+        padding: 12px 15px;
+        border-radius: 4px;
+        margin-bottom: 15px;
+      }
+      
+      .alert-success {
+        background-color: rgba(76, 175, 80, 0.1);
+        border-left: 4px solid var(--success-color);
+        color: var(--success-color);
+      }
+      
+      .alert-error {
+        background-color: rgba(244, 67, 54, 0.1);
+        border-left: 4px solid var(--error-color);
+        color: var(--error-color);
+      }
+      
+      .alert-info {
+        background-color: rgba(33, 150, 243, 0.1);
+        border-left: 4px solid var(--info-color);
+        color: var(--info-color);
+      }
+      
+      #download-container {
+        margin-top: 20px;
+        text-align: center;
+      }
+      
+      #download-container .btn {
+        margin-top: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="dialog">
+      <div class="dialog-header">
+        <h2><i class="fas fa-file-export"></i> CSVエクスポート</h2>
+        <p>処理したデータをeBay形式でエクスポートします</p>
+      </div>
+      
+      <div id="message-container"></div>
+      
+      <div class="export-info">
+        <h3>エクスポート情報</h3>
+        <ul>
+          <li>エクスポートシートのデータがeBay形式のCSVとしてダウンロードされます</li>
+          <li>eBayの一括アップロードツールに直接インポート可能なフォーマットです</li>
+          <li>ファイル名には日時が自動的に追加されます</li>
+        </ul>
+      </div>
+      
+      <form id="export-form">
+        <div id="download-container"></div>
+        
+        <div class="dialog-footer">
+          <button type="button" class="btn btn-outline" onclick="google.script.host.close()">
+            キャンセル
+          </button>
+          <button type="submit" class="btn btn-primary" id="export-button">
+            <i class="fas fa-download"></i> エクスポート
+          </button>
+        </div>
+      </form>
+    </div>
+    
+    <script>
+      <?!= UI.getJavaScript(); ?>
+      
+      // フォーム送信イベントの処理
+      document.getElementById('export-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        // エクスポートボタンを無効化
+        const exportButton = document.getElementById('export-button');
+        exportButton.disabled = true;
+        exportButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 処理中...';
+        
+        // エクスポート処理を実行
+        google.script.run
+          .withSuccessHandler(function(downloadUrl) {
+            if (downloadUrl) {
+              // ダウンロードリンクを表示
+              const downloadContainer = document.getElementById('download-container');
+              downloadContainer.innerHTML = `
+                <div class="alert alert-success">
+                  <p>CSVファイルのエクスポートが完了しました。</p>
+                </div>
+                <a href="${downloadUrl}" target="_blank" class="btn btn-success">
+                  <i class="fas fa-download"></i> ダウンロード
+                </a>
+              `;
+              
+              // エクスポートボタンを非表示
+              exportButton.style.display = 'none';
+            } else {
+              showMessage('error', 'エクスポート中にエラーが発生しました。');
+              // ボタンを元に戻す
+              exportButton.disabled = false;
+              exportButton.innerHTML = '<i class="fas fa-download"></i> エクスポート';
+            }
+          })
+          .withFailureHandler(function(error) {
+            showMessage('error', 'エラー: ' + error.message);
+            // ボタンを元に戻す
+            exportButton.disabled = false;
+            exportButton.innerHTML = '<i class="fas fa-download"></i> エクスポート';
+          })
+          .exportToCsv();
+      });
+    </script>
+  </body>
+</html> 

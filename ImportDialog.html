@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+      <?!= UI.getStylesheet(); ?>
+      
+      /* インポートダイアログ専用スタイル */
+      .file-upload {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 20px;
+        border: 2px dashed var(--primary-light);
+        border-radius: 8px;
+        margin: 20px 0;
+        transition: all 0.3s ease;
+      }
+      
+      .file-upload:hover {
+        border-color: var(--primary-color);
+        background-color: rgba(76, 175, 80, 0.05);
+      }
+      
+      .file-upload i {
+        font-size: 48px;
+        color: var(--primary-color);
+        margin-bottom: 15px;
+      }
+      
+      .file-upload p {
+        margin-bottom: 15px;
+        color: var(--text-secondary);
+      }
+      
+      .file-input-wrapper {
+        position: relative;
+        overflow: hidden;
+        display: inline-block;
+      }
+      
+      .file-input-wrapper input[type=file] {
+        position: absolute;
+        left: 0;
+        top: 0;
+        opacity: 0;
+        width: 100%;
+        height: 100%;
+        cursor: pointer;
+      }
+      
+      .alert {
+        padding: 12px 15px;
+        border-radius: 4px;
+        margin-bottom: 15px;
+      }
+      
+      .alert-success {
+        background-color: rgba(76, 175, 80, 0.1);
+        border-left: 4px solid var(--success-color);
+        color: var(--success-color);
+      }
+      
+      .alert-error {
+        background-color: rgba(244, 67, 54, 0.1);
+        border-left: 4px solid var(--error-color);
+        color: var(--error-color);
+      }
+      
+      .alert-info {
+        background-color: rgba(33, 150, 243, 0.1);
+        border-left: 4px solid var(--info-color);
+        color: var(--info-color);
+      }
+      
+      #selected-file {
+        margin-top: 10px;
+        font-size: 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="dialog">
+      <div class="dialog-header">
+        <h2><i class="fas fa-file-import"></i> CSVインポート</h2>
+        <p>リサーチツールからエクスポートしたCSVファイルをインポートします</p>
+      </div>
+      
+      <div id="message-container"></div>
+      
+      <form id="import-form">
+        <div class="file-upload">
+          <i class="fas fa-cloud-upload-alt"></i>
+          <p>ファイルをドロップするか、クリックして選択してください</p>
+          
+          <div class="file-input-wrapper">
+            <button type="button" class="btn btn-primary">
+              <i class="fas fa-file-csv"></i> CSVファイルを選択
+            </button>
+            <input type="file" id="csv-file" accept=".csv" onchange="updateFileName(this)">
+          </div>
+          
+          <p id="selected-file"></p>
+        </div>
+        
+        <div class="dialog-footer">
+          <button type="button" class="btn btn-outline" onclick="google.script.host.close()">
+            キャンセル
+          </button>
+          <button type="submit" class="btn btn-primary" id="import-button">
+            <i class="fas fa-upload"></i> インポート
+          </button>
+        </div>
+      </form>
+    </div>
+    
+    <script>
+      <?!= UI.getJavaScript(); ?>
+      
+      // 選択されたファイル名を表示
+      function updateFileName(input) {
+        const fileNameElement = document.getElementById('selected-file');
+        if (input.files.length > 0) {
+          const file = input.files[0];
+          fileNameElement.textContent = `選択されたファイル: ${file.name} (${formatFileSize(file.size)})`;
+        } else {
+          fileNameElement.textContent = '';
+        }
+      }
+      
+      // ファイルサイズのフォーマット
+      function formatFileSize(bytes) {
+        if (bytes < 1024) {
+          return bytes + ' bytes';
+        } else if (bytes < 1024 * 1024) {
+          return (bytes / 1024).toFixed(1) + ' KB';
+        } else {
+          return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        }
+      }
+      
+      // CSVファイルからデータをインポート
+      document.getElementById('import-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const fileInput = document.getElementById('csv-file');
+        const file = fileInput.files[0];
+        
+        if (!file) {
+          showMessage('error', 'ファイルを選択してください。');
+          return;
+        }
+        
+        // ファイル形式の検証
+        if (!file.name.endsWith('.csv')) {
+          showMessage('error', 'CSVファイルを選択してください。');
+          return;
+        }
+        
+        // アップロード中メッセージを表示
+        showMessage('info', 'ファイルをアップロード中...');
+        
+        // インポートボタンを無効化
+        const importButton = document.getElementById('import-button');
+        importButton.disabled = true;
+        importButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 処理中...';
+        
+        // CSVファイルを読み込み
+        const reader = new FileReader();
+        
+        reader.onload = function(e) {
+          try {
+            const csvData = e.target.result;
+            
+            // 大きすぎるファイルを処理しようとしていないか確認
+            if (csvData.length > 5 * 1024 * 1024) { // 5MB制限
+              throw new Error('ファイルサイズが大きすぎます（5MB以下にしてください）');
+            }
+            
+            // Base64エンコード
+            let base64Data;
+            try {
+              // Unicodeの文字列をバイナリ表現に変換してからエンコード
+              const unicodeToUtf8 = unescape(encodeURIComponent(csvData));
+              base64Data = btoa(unicodeToUtf8);
+            } catch (error) {
+              throw new Error('ファイルのエンコードに失敗しました。テキスト形式のCSVファイルを選択してください。');
+            }
+            
+            // Google Apps Scriptでインポート処理
+            google.script.run
+              .withSuccessHandler(function(result) {
+                if (result) {
+                  showMessage('success', 'ファイルがインポートされました。');
+                  // ダイアログを閉じる
+                  setTimeout(function() {
+                    google.script.host.close();
+                  }, 2000);
+                } else {
+                  showMessage('error', 'インポート中にエラーが発生しました。');
+                  // ボタンを元に戻す
+                  importButton.disabled = false;
+                  importButton.innerHTML = '<i class="fas fa-upload"></i> インポート';
+                }
+              })
+              .withFailureHandler(function(error) {
+                showMessage('error', 'エラー: ' + (error.message || '不明なエラーが発生しました'));
+                // ボタンを元に戻す
+                importButton.disabled = false;
+                importButton.innerHTML = '<i class="fas fa-upload"></i> インポート';
+              })
+              .importCsvFromBase64(base64Data);
+          } catch (error) {
+            showMessage('error', error.message || 'ファイル処理中にエラーが発生しました。');
+            // ボタンを元に戻す
+            importButton.disabled = false;
+            importButton.innerHTML = '<i class="fas fa-upload"></i> インポート';
+          }
+        };
+        
+        reader.onerror = function() {
+          showMessage('error', 'ファイルの読み込み中にエラーが発生しました。');
+          // ボタンを元に戻す
+          importButton.disabled = false;
+          importButton.innerHTML = '<i class="fas fa-upload"></i> インポート';
+        };
+        
+        reader.readAsText(file);
+      });
+    </script>
+  </body>
+</html> 
