@@ -172,7 +172,25 @@ Filters.runNgWordFilter = function() {
       }
     });
     
-    UI.showSuccessMessage(`NGワードフィルタリングが完了しました。リスト削除: ${rowsToDelete.length}件、部分削除処理: ${resultData.filter(([_, row]) => row[titleColumnIndex] !== dataRows[parseInt(row) - 2][titleColumnIndex]).length}件`);
+    // 部分削除処理の件数を計算（エラー修正）
+    let partialDeleteCount = 0;
+    try {
+      partialDeleteCount = resultData.filter(([rowIndex, row]) => {
+        // 対応する元データの行を探す
+        const originalRowIndex = rowIndex - 2; // 行番号から元データのインデックスに変換
+        if (originalRowIndex >= 0 && originalRowIndex < dataRows.length) {
+          const originalRow = dataRows[originalRowIndex];
+          // タイトルが変更されているかどうかをチェック
+          return row[titleColumnIndex] !== originalRow[titleColumnIndex];
+        }
+        return false;
+      }).length;
+    } catch (error) {
+      Logger.logError('部分削除件数集計中にエラー: ' + error.message);
+      partialDeleteCount = 0; // エラーの場合は0件とする
+    }
+    
+    UI.showSuccessMessage(`NGワードフィルタリングが完了しました。リスト削除: ${rowsToDelete.length}件、部分削除処理: ${partialDeleteCount}件`);
     Logger.endProcess('NGワードフィルタリング完了');
     
     return true;

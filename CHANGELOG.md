@@ -1,5 +1,10 @@
 # eBay出品作業効率化ツール 変更履歴
 
+## [v1.3.8] - 2025-05-15
+### 不具合修正
+- NGワードフィルタリング完了メッセージでの「Cannot read properties of undefined (reading '4')」エラーを修正
+- 部分削除処理の件数計算ロジックを改善し、エラーハンドリングを追加
+
 ## [v1.3.7] - 2025-05-15
 ### 不具合修正
 - NGワードフィルタリング実行時の「Cannot read properties of undefined (reading '4')」エラーを修正
