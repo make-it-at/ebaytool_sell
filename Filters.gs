@@ -3,7 +3,7 @@
  * 
  * 各種フィルタリング機能を提供します。
  * 
- * バージョン: v1.3.4
+ * バージョン: v1.3.5
  * 最終更新日: 2025-05-14
  */
 
@@ -333,7 +333,12 @@ Filters.runLengthFilter = function() {
     
     // 設定を取得
     const settings = Config.getSettings();
-    const characterLimit = settings.characterLimit || Config.DEFAULT_SETTINGS.CHARACTER_LIMIT;
+    const characterLimit = settings.characterLimit;
+    
+    // 設定値が取得できない場合は処理を中止
+    if (characterLimit === undefined || characterLimit === null) {
+      throw new Error('文字数制限の設定値が取得できません。設定シートを確認してください。');
+    }
     
     Logger.log(`文字数制限フィルター: ${characterLimit}文字以下を削除`);
     
@@ -514,7 +519,12 @@ Filters.runPriceFilter = function() {
     
     // 設定を取得
     const settings = Config.getSettings();
-    const priceThreshold = settings.priceThreshold || Config.DEFAULT_SETTINGS.PRICE_THRESHOLD;
+    const priceThreshold = settings.priceThreshold;
+    
+    // 設定値が取得できない場合は処理を中止
+    if (priceThreshold === undefined || priceThreshold === null) {
+      throw new Error('価格下限の設定値が取得できません。設定シートを確認してください。');
+    }
     
     Logger.log(`価格フィルター: $${priceThreshold}以下を削除`);
     
