@@ -3,7 +3,7 @@
  * 
  * 各種フィルタリング機能を提供します。
  * 
- * バージョン: v1.3.1
+ * バージョン: v1.3.2
  * 最終更新日: 2025-05-14
  */
 
@@ -202,40 +202,35 @@ Filters.runDuplicateCheck = function() {
     const headerRow = values[0];
     const dataRows = values.slice(1);
     
-    // 設定を取得
-    const settings = Config.getSettings();
-    const duplicateThreshold = settings.duplicateThreshold;
+    // Title列のインデックスを取得
+    const titleColumnIndex = headerRow.indexOf('Title');
+    if (titleColumnIndex === -1) {
+      throw new Error('Title列が見つかりません。ヘッダー行に「Title」が含まれているか確認してください。');
+    }
     
     // 重複チェック結果の準備
     let rowsToDelete = [];
+    let uniqueTitles = new Set();
     
-    // 一つ目のループは固定する行
-    for (let i = 0; i < dataRows.length; i++) {
+    // 完全一致の重複チェック
+    dataRows.forEach((row, index) => {
       // 処理の進捗状況を更新（10%単位）
-      if (i % Math.floor(Math.max(dataRows.length, 10) / 10) === 0) {
-        UI.updateProgressBar(Math.floor((i / Math.max(dataRows.length, 1)) * 100));
+      if (index % Math.floor(Math.max(dataRows.length, 10) / 10) === 0) {
+        UI.updateProgressBar(Math.floor((index / Math.max(dataRows.length, 1)) * 100));
       }
       
-      // すでに削除対象になっている行はスキップ
-      if (rowsToDelete.includes(i + 2)) continue;
+      const title = row[titleColumnIndex]; // Title列の値
       
-      const title1 = dataRows[i][0]; // 商品名
-      
-      for (let j = i + 1; j < dataRows.length; j++) {
-        if (rowsToDelete.includes(j + 2)) continue;
-        
-        const title2 = dataRows[j][0]; // 比較対象の商品名
-        
-        // 類似度を計算（レーベンシュタイン距離を使用）
-        const similarity = this.calculateSimilarity(title1, title2);
-        
-        // 閾値以上の類似度がある場合は重複と判定
-        if (similarity >= duplicateThreshold) {
-          rowsToDelete.push(j + 2); // +2 は1-indexedと、ヘッダー行をスキップするため
-          Logger.log(`重複検出: "${title1}" と "${title2}" （類似度: ${similarity}%）`);
-        }
+      // 完全一致の重複チェック
+      if (uniqueTitles.has(title)) {
+        // すでに同じタイトルが存在する場合は削除対象
+        rowsToDelete.push(index + 2); // +2 は1-indexedと、ヘッダー行をスキップするため
+        Logger.log(`完全一致の重複を検出: "${title}"`);
+      } else {
+        // 新しいタイトルを追加
+        uniqueTitles.add(title);
       }
-    }
+    });
     
     // 処理結果を反映
     // 削除対象の行を削除（後ろから処理して行ずれを防止）
@@ -246,7 +241,7 @@ Filters.runDuplicateCheck = function() {
       }
     }
     
-    UI.showSuccessMessage(`重複チェックが完了しました。${rowsToDelete.length}件の重複を除外しました。`);
+    UI.showSuccessMessage(`重複チェックが完了しました。${rowsToDelete.length}件の完全一致重複を除外しました。`);
     Logger.endProcess('重複チェック完了');
     
     return true;
