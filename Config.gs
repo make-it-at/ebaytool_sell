@@ -3,8 +3,8 @@
  * 
  * アプリケーション全体で使用する設定値を提供します。
  * 
- * バージョン: v1.3.6
- * 最終更新日: 2025-05-14
+ * バージョン: v1.3.7
+ * 最終更新日: 2025-05-15
  */
 
 // Config名前空間
@@ -108,6 +108,12 @@ Config.getSettings = function() {
   }
   
   try {
+    // 設定シートのヘッダー列が存在するか確認
+    const headerRow = settingsSheet.getRange(1, 1, 1, 5).getValues()[0];
+    if (headerRow.length < 5 || !headerRow[0] || !headerRow[2] || !headerRow[3] || !headerRow[4]) {
+      throw new Error('設定シートのヘッダー行が正しくありません。「リスト削除」「削除ワード」「文字数制限」「価格下限」「重複類似度閾値」の列が必要です');
+    }
+    
     // リスト削除NGワードを取得（A列）
     let deleteListNgWords = [];
     let row = 2; // ヘッダー行の次から開始
@@ -133,27 +139,45 @@ Config.getSettings = function() {
     }
     
     // 文字数制限値を取得（C列2行目）
-    let characterLimitRaw = settingsSheet.getRange(2, 3).getValue();
-    let characterLimit = parseInt(characterLimitRaw);
-    if (isNaN(characterLimit) || characterLimit <= 0) {
-      Logger.log(`文字数制限が不正です: ${characterLimitRaw}。デフォルト値(${this.DEFAULT_SETTINGS.CHARACTER_LIMIT})を使用します。`);
-      characterLimit = this.DEFAULT_SETTINGS.CHARACTER_LIMIT;
+    let characterLimit = this.DEFAULT_SETTINGS.CHARACTER_LIMIT; // デフォルト値をあらかじめセット
+    try {
+      let characterLimitRaw = settingsSheet.getRange(2, 3).getValue();
+      let parsedCharacterLimit = parseInt(characterLimitRaw);
+      if (!isNaN(parsedCharacterLimit) && parsedCharacterLimit > 0) {
+        characterLimit = parsedCharacterLimit;
+      } else {
+        Logger.log(`文字数制限が不正です: ${characterLimitRaw}。デフォルト値(${this.DEFAULT_SETTINGS.CHARACTER_LIMIT})を使用します。`);
+      }
+    } catch (e) {
+      Logger.logError(`文字数制限の取得中にエラー: ${e.message}。デフォルト値(${this.DEFAULT_SETTINGS.CHARACTER_LIMIT})を使用します。`);
     }
     
     // 価格下限値を取得（D列2行目）
-    let priceThresholdRaw = settingsSheet.getRange(2, 4).getValue();
-    let priceThreshold = parseFloat(priceThresholdRaw);
-    if (isNaN(priceThreshold) || priceThreshold < 0) {
-      Logger.log(`価格下限が不正です: ${priceThresholdRaw}。デフォルト値(${this.DEFAULT_SETTINGS.PRICE_THRESHOLD})を使用します。`);
-      priceThreshold = this.DEFAULT_SETTINGS.PRICE_THRESHOLD;
+    let priceThreshold = this.DEFAULT_SETTINGS.PRICE_THRESHOLD; // デフォルト値をあらかじめセット
+    try {
+      let priceThresholdRaw = settingsSheet.getRange(2, 4).getValue();
+      let parsedPriceThreshold = parseFloat(priceThresholdRaw);
+      if (!isNaN(parsedPriceThreshold) && parsedPriceThreshold >= 0) {
+        priceThreshold = parsedPriceThreshold;
+      } else {
+        Logger.log(`価格下限が不正です: ${priceThresholdRaw}。デフォルト値(${this.DEFAULT_SETTINGS.PRICE_THRESHOLD})を使用します。`);
+      }
+    } catch (e) {
+      Logger.logError(`価格下限の取得中にエラー: ${e.message}。デフォルト値(${this.DEFAULT_SETTINGS.PRICE_THRESHOLD})を使用します。`);
     }
     
     // 重複閾値を取得（E列2行目）
-    let duplicateThresholdRaw = settingsSheet.getRange(2, 5).getValue();
-    let duplicateThreshold = parseInt(duplicateThresholdRaw);
-    if (isNaN(duplicateThreshold) || duplicateThreshold <= 0 || duplicateThreshold > 100) {
-      Logger.log(`重複閾値が不正です: ${duplicateThresholdRaw}。デフォルト値(${this.DEFAULT_SETTINGS.DUPLICATE_THRESHOLD})を使用します。`);
-      duplicateThreshold = this.DEFAULT_SETTINGS.DUPLICATE_THRESHOLD;
+    let duplicateThreshold = this.DEFAULT_SETTINGS.DUPLICATE_THRESHOLD; // デフォルト値をあらかじめセット
+    try {
+      let duplicateThresholdRaw = settingsSheet.getRange(2, 5).getValue();
+      let parsedDuplicateThreshold = parseInt(duplicateThresholdRaw);
+      if (!isNaN(parsedDuplicateThreshold) && parsedDuplicateThreshold > 0 && parsedDuplicateThreshold <= 100) {
+        duplicateThreshold = parsedDuplicateThreshold;
+      } else {
+        Logger.log(`重複閾値が不正です: ${duplicateThresholdRaw}。デフォルト値(${this.DEFAULT_SETTINGS.DUPLICATE_THRESHOLD})を使用します。`);
+      }
+    } catch (e) {
+      Logger.logError(`重複閾値の取得中にエラー: ${e.message}。デフォルト値(${this.DEFAULT_SETTINGS.DUPLICATE_THRESHOLD})を使用します。`);
     }
     
     // 設定値をログ出力（デバッグ用）
