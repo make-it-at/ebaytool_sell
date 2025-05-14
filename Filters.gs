@@ -3,7 +3,7 @@
  * 
  * 各種フィルタリング機能を提供します。
  * 
- * バージョン: v1.3.2
+ * バージョン: v1.3.3
  * 最終更新日: 2025-05-14
  */
 
@@ -335,6 +335,8 @@ Filters.runLengthFilter = function() {
     const settings = Config.getSettings();
     const characterLimit = settings.characterLimit;
     
+    Logger.log(`文字数制限フィルター: ${characterLimit}文字未満を削除`);
+    
     // 削除対象の行を特定
     let rowsToDelete = [];
     
@@ -348,7 +350,7 @@ Filters.runLengthFilter = function() {
       const title = row[titleColumnIndex]; // Title列の値
       
       // 文字数チェック
-      if (title.length <= characterLimit) {
+      if (title && title.length < characterLimit) {
         rowsToDelete.push(index + 2); // +2 は1-indexedと、ヘッダー行をスキップするため
         Logger.log(`文字数不足のためスキップ: "${title}" (${title.length}文字)`);
       }
@@ -363,7 +365,7 @@ Filters.runLengthFilter = function() {
       }
     }
     
-    UI.showSuccessMessage(`文字数制限フィルタリングが完了しました。${rowsToDelete.length}件が文字数不足でスキップされました。`);
+    UI.showSuccessMessage(`文字数制限フィルタリングが完了しました。${rowsToDelete.length}件が${characterLimit}文字未満でスキップされました。`);
     Logger.endProcess('文字数制限フィルタリング完了');
     
     return true;
@@ -514,6 +516,8 @@ Filters.runPriceFilter = function() {
     const settings = Config.getSettings();
     const priceThreshold = settings.priceThreshold;
     
+    Logger.log(`価格フィルター: $${priceThreshold}未満を削除`);
+    
     // 削除対象の行を特定
     let rowsToDelete = [];
     
@@ -524,10 +528,16 @@ Filters.runPriceFilter = function() {
         UI.updateProgressBar(Math.floor((index / Math.max(dataRows.length, 1)) * 100));
       }
       
-      const price = parseFloat(row[priceColumnIndex]); // StartPrice列の値
+      let price = row[priceColumnIndex]; // StartPrice列の値
+      
+      // 文字列の場合は数値に変換
+      if (typeof price === 'string') {
+        // 数値以外の文字を削除（$や,など）
+        price = parseFloat(price.replace(/[^0-9.]/g, ''));
+      }
       
       // 価格チェック
-      if (isNaN(price) || price <= priceThreshold) {
+      if (isNaN(price) || price < priceThreshold) {
         rowsToDelete.push(index + 2); // +2 は1-indexedと、ヘッダー行をスキップするため
         Logger.log(`価格条件不一致のためスキップ: $${price}`);
       }
@@ -542,7 +552,7 @@ Filters.runPriceFilter = function() {
       }
     }
     
-    UI.showSuccessMessage(`価格フィルタリングが完了しました。${rowsToDelete.length}件が価格条件で除外されました。`);
+    UI.showSuccessMessage(`価格フィルタリングが完了しました。${rowsToDelete.length}件が$${priceThreshold}未満で除外されました。`);
     Logger.endProcess('価格フィルタリング完了');
     
     return true;
