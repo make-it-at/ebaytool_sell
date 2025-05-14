@@ -3,7 +3,7 @@
  * 
  * アプリケーション全体で使用する設定値を提供します。
  * 
- * バージョン: v1.3.5
+ * バージョン: v1.3.6
  * 最終更新日: 2025-05-14
  */
 
@@ -101,58 +101,82 @@ Config.getSettings = function() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const settingsSheet = ss.getSheetByName(this.SHEET_NAMES.SETTINGS);
   
-  // 設定がなければデフォルト値を返す
+  // 設定シートがなければデフォルト値を返す
   if (!settingsSheet) {
+    Logger.log('設定シートが見つかりません。デフォルト値を使用します。');
     return this.DEFAULT_SETTINGS;
   }
   
-  // NGワードリストを取得（A列の値をすべて取得）
-  let ngWords = [];
-  let row = this.SECTION_START.NG_WORDS;
-  while (row <= 100) { // 最大100行まで検索
-    const value = settingsSheet.getRange(row, 1).getValue();
-    if (!value || value === '' || value === '設定項目') {
-      break; // 空の行または次のセクションヘッダーで終了
+  try {
+    // リスト削除NGワードを取得（A列）
+    let deleteListNgWords = [];
+    let row = 2; // ヘッダー行の次から開始
+    while (row <= 100) {
+      const value = settingsSheet.getRange(row, 1).getValue();
+      if (!value || value === '') {
+        break; // 空の行で終了
+      }
+      deleteListNgWords.push(value);
+      row++;
     }
-    ngWords.push(value);
-    row++;
-  }
-  
-  // 設定項目テーブルの位置を検索
-  let settingsRow = this.SECTION_START.SETTINGS;
-  let found = false;
-  
-  while (settingsRow <= 100 && !found) {
-    const value = settingsSheet.getRange(settingsRow, 1).getValue();
-    if (value === '設定項目') {
-      found = true;
-      break;
+    
+    // 削除ワードを取得（B列）
+    let deletePartNgWords = [];
+    row = 2; // ヘッダー行の次から開始
+    while (row <= 100) {
+      const value = settingsSheet.getRange(row, 2).getValue();
+      if (!value || value === '') {
+        break; // 空の行で終了
+      }
+      deletePartNgWords.push(value);
+      row++;
     }
-    settingsRow++;
-  }
-  
-  // 設定項目が見つからない場合はデフォルト値を返す
-  if (!found) {
+    
+    // 文字数制限値を取得（C列2行目）
+    let characterLimitRaw = settingsSheet.getRange(2, 3).getValue();
+    let characterLimit = parseInt(characterLimitRaw);
+    if (isNaN(characterLimit) || characterLimit <= 0) {
+      Logger.log(`文字数制限が不正です: ${characterLimitRaw}。デフォルト値(${this.DEFAULT_SETTINGS.CHARACTER_LIMIT})を使用します。`);
+      characterLimit = this.DEFAULT_SETTINGS.CHARACTER_LIMIT;
+    }
+    
+    // 価格下限値を取得（D列2行目）
+    let priceThresholdRaw = settingsSheet.getRange(2, 4).getValue();
+    let priceThreshold = parseFloat(priceThresholdRaw);
+    if (isNaN(priceThreshold) || priceThreshold < 0) {
+      Logger.log(`価格下限が不正です: ${priceThresholdRaw}。デフォルト値(${this.DEFAULT_SETTINGS.PRICE_THRESHOLD})を使用します。`);
+      priceThreshold = this.DEFAULT_SETTINGS.PRICE_THRESHOLD;
+    }
+    
+    // 重複閾値を取得（E列2行目）
+    let duplicateThresholdRaw = settingsSheet.getRange(2, 5).getValue();
+    let duplicateThreshold = parseInt(duplicateThresholdRaw);
+    if (isNaN(duplicateThreshold) || duplicateThreshold <= 0 || duplicateThreshold > 100) {
+      Logger.log(`重複閾値が不正です: ${duplicateThresholdRaw}。デフォルト値(${this.DEFAULT_SETTINGS.DUPLICATE_THRESHOLD})を使用します。`);
+      duplicateThreshold = this.DEFAULT_SETTINGS.DUPLICATE_THRESHOLD;
+    }
+    
+    // 設定値をログ出力（デバッグ用）
+    Logger.log(`設定を読み込みました: リスト削除NGワード=${deleteListNgWords.length}件, 部分削除NGワード=${deletePartNgWords.length}件, 文字数制限=${characterLimit}, 価格下限=${priceThreshold}, 重複閾値=${duplicateThreshold}`);
+    
     return {
-      ngWords: ngWords.filter(word => word.trim() !== ''),
-      ...this.DEFAULT_SETTINGS
+      deleteListNgWords: deleteListNgWords,
+      deletePartNgWords: deletePartNgWords,
+      characterLimit: characterLimit,
+      priceThreshold: priceThreshold,
+      duplicateThreshold: duplicateThreshold
+    };
+  } catch (error) {
+    // エラーが発生した場合はデフォルト値を返す
+    Logger.logError('設定値の取得中にエラーが発生しました: ' + error.message + '。デフォルト値を使用します。');
+    return {
+      deleteListNgWords: [],
+      deletePartNgWords: [],
+      characterLimit: this.DEFAULT_SETTINGS.CHARACTER_LIMIT,
+      priceThreshold: this.DEFAULT_SETTINGS.PRICE_THRESHOLD,
+      duplicateThreshold: this.DEFAULT_SETTINGS.DUPLICATE_THRESHOLD
     };
   }
-  
-  // 設定値は見出しの1行下から取得
-  const valueRow = settingsRow + 1;
-  const ngWordMode = settingsSheet.getRange(valueRow, 2).getValue() || this.DEFAULT_SETTINGS.NG_WORD_MODE;
-  const characterLimit = parseInt(settingsSheet.getRange(valueRow, 3).getValue()) || this.DEFAULT_SETTINGS.CHARACTER_LIMIT;
-  const priceThreshold = parseFloat(settingsSheet.getRange(valueRow, 4).getValue()) || this.DEFAULT_SETTINGS.PRICE_THRESHOLD;
-  const duplicateThreshold = parseInt(settingsSheet.getRange(valueRow, 5).getValue()) || this.DEFAULT_SETTINGS.DUPLICATE_THRESHOLD;
-  
-  return {
-    ngWords: ngWords.filter(word => word.trim() !== ''),
-    characterLimit: characterLimit,
-    priceThreshold: priceThreshold,
-    duplicateThreshold: duplicateThreshold,
-    ngWordMode: ngWordMode
-  };
 };
 
 /**

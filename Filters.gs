@@ -3,7 +3,7 @@
  * 
  * 各種フィルタリング機能を提供します。
  * 
- * バージョン: v1.3.5
+ * バージョン: v1.3.6
  * 最終更新日: 2025-05-14
  */
 
@@ -77,13 +77,16 @@ Filters.runNgWordFilter = function() {
     
     // 設定を取得
     const settings = Config.getSettings();
-    const ngWords = settings.ngWords;
-    const ngWordMode = settings.ngWordMode;
+    const deleteListNgWords = settings.deleteListNgWords || [];
+    const deletePartNgWords = settings.deletePartNgWords || [];
     
     // 設定内容をログに出力（デバッグ用）
-    Logger.log(`NGワード設定: ${ngWords ? ngWords.length : 0}件のNGワード, モード: ${ngWordMode}`);
-    if (ngWords && ngWords.length > 0) {
-      ngWords.forEach(word => Logger.log(`NGワード: "${word}"`));
+    Logger.log(`NGワード設定: リスト削除=${deleteListNgWords.length}件, 部分削除=${deletePartNgWords.length}件`);
+    if (deleteListNgWords.length > 0) {
+      deleteListNgWords.forEach(word => Logger.log(`リスト削除NGワード: "${word}"`));
+    }
+    if (deletePartNgWords.length > 0) {
+      deletePartNgWords.forEach(word => Logger.log(`部分削除NGワード: "${word}"`));
     }
     
     // 新しい結果データの準備
@@ -99,38 +102,42 @@ Filters.runNgWordFilter = function() {
       
       const title = row[titleColumnIndex]; // Title列の値
       
-      // NGワードのチェック
-      let containsNgWord = false;
-      let processedTitle = title;
-      let matchedNgWords = [];
+      // リスト削除NGワードのチェック
+      let containsListNgWord = false;
+      let matchedListNgWords = [];
       
-      for (const ngWord of ngWords) {
+      for (const ngWord of deleteListNgWords) {
         if (ngWord && title.toLowerCase().includes(ngWord.toLowerCase())) {
-          containsNgWord = true;
-          matchedNgWords.push(ngWord);
-          
-          // 部分削除モードの場合は、NGワードのみを削除
-          if (ngWordMode === '部分削除モード') {
-            processedTitle = processedTitle.replace(new RegExp(ngWord, 'gi'), '');
-          } else {
-            // リスト全削除モードはこの行を削除対象とするのでbreak
-            break;
-          }
+          containsListNgWord = true;
+          matchedListNgWords.push(ngWord);
+          break; // 1つでも見つかれば削除対象
         }
       }
       
-      // リスト全削除モードでNGワードを含む場合は削除対象に追加
-      if (containsNgWord && ngWordMode !== '部分削除モード') {
+      // リスト削除NGワードを含む場合は削除対象に追加
+      if (containsListNgWord) {
         rowsToDelete.push(index + 2); // +2 は1-indexedと、ヘッダー行をスキップするため
-        Logger.log(`NGワード含有のためスキップ: "${title}", 一致NGワード: ${matchedNgWords.join(', ')}`);
+        Logger.log(`リスト削除NGワード含有のためスキップ: "${title}", 一致NGワード: ${matchedListNgWords.join(', ')}`);
       } else {
-        // それ以外の場合は結果データに追加
+        // それ以外の場合は部分削除NGワードのチェック
+        let processedTitle = title;
+        let matchedPartNgWords = [];
+        
+        for (const ngWord of deletePartNgWords) {
+          if (ngWord && processedTitle.toLowerCase().includes(ngWord.toLowerCase())) {
+            matchedPartNgWords.push(ngWord);
+            // NGワードのみを削除（大文字小文字を区別せずに削除するため正規表現を使用）
+            processedTitle = processedTitle.replace(new RegExp(ngWord, 'gi'), '');
+          }
+        }
+        
+        // 結果データに追加
         const newRow = [...row];
         
-        // 部分削除モードの場合、タイトルを置き換え
-        if (ngWordMode === '部分削除モード' && containsNgWord) {
+        // 部分削除NGワードを処理した場合、タイトルを置き換え
+        if (matchedPartNgWords.length > 0) {
           newRow[titleColumnIndex] = processedTitle;
-          Logger.log(`NGワード部分削除: "${title}" → "${processedTitle}", 一致NGワード: ${matchedNgWords.join(', ')}`);
+          Logger.log(`部分削除NGワード処理: "${title}" → "${processedTitle}", 一致NGワード: ${matchedPartNgWords.join(', ')}`);
         }
         
         resultData.push([index + 2, newRow]); // 行番号と新しい行データを保存
@@ -165,7 +172,7 @@ Filters.runNgWordFilter = function() {
       }
     });
     
-    UI.showSuccessMessage(`NGワードフィルタリングが完了しました。処理結果: ${resultData.length}件 / ${dataRows.length}件 (${rowsToDelete.length}件削除)`);
+    UI.showSuccessMessage(`NGワードフィルタリングが完了しました。リスト削除: ${rowsToDelete.length}件、部分削除処理: ${resultData.filter(([_, row]) => row[titleColumnIndex] !== dataRows[parseInt(row) - 2][titleColumnIndex]).length}件`);
     Logger.endProcess('NGワードフィルタリング完了');
     
     return true;
