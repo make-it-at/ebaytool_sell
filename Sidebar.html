@@ -511,7 +511,7 @@
           google.script.run
             .withSuccessHandler(onFilterComplete)
             .withFailureHandler(onError)
-            .Filters.runNgWordFilter();
+            .runNgWordFilter();
         });
         
         document.getElementById('duplicate-btn').addEventListener('click', function() {
@@ -519,7 +519,7 @@
           google.script.run
             .withSuccessHandler(onFilterComplete)
             .withFailureHandler(onError)
-            .Filters.runDuplicateCheck();
+            .runDuplicateCheck();
         });
         
         document.getElementById('length-btn').addEventListener('click', function() {
@@ -527,7 +527,7 @@
           google.script.run
             .withSuccessHandler(onFilterComplete)
             .withFailureHandler(onError)
-            .Filters.runLengthFilter();
+            .runLengthFilter();
         });
         
         document.getElementById('location-btn').addEventListener('click', function() {
@@ -535,7 +535,7 @@
           google.script.run
             .withSuccessHandler(onFilterComplete)
             .withFailureHandler(onError)
-            .Filters.runLocationFix();
+            .runLocationFix();
         });
         
         document.getElementById('price-btn').addEventListener('click', function() {
@@ -543,7 +543,7 @@
           google.script.run
             .withSuccessHandler(onFilterComplete)
             .withFailureHandler(onError)
-            .Filters.runPriceFilter();
+            .runPriceFilter();
         });
         
         document.getElementById('run-all-btn').addEventListener('click', function() {

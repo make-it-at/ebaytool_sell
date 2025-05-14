@@ -3,12 +3,12 @@
  * 
  * メインアプリケーションの初期化、UI表示、イベントハンドリングを担当します。
  * 
- * バージョン: v1.3.0
- * 最終更新日: 2025-05-13
+ * バージョン: v1.3.1
+ * 最終更新日: 2025-05-14
  */
 
 // アプリケーションのバージョン情報
-const APP_VERSION = 'v1.3.0';
+const APP_VERSION = 'v1.3.1';
 
 /**
  * eBay出品作業効率化ツール
@@ -75,6 +75,27 @@ function showSettingsDialog() {
 
 function showHelpDialog() {
   UI.showHelpDialog();
+}
+
+// グローバル関数としてFilters関数をエクスポート（サイドバーからのアクセス用）
+function runNgWordFilter() {
+  return Filters.runNgWordFilter();
+}
+
+function runDuplicateCheck() {
+  return Filters.runDuplicateCheck();
+}
+
+function runLengthFilter() {
+  return Filters.runLengthFilter();
+}
+
+function runLocationFix() {
+  return Filters.runLocationFix();
+}
+
+function runPriceFilter() {
+  return Filters.runPriceFilter();
 }
 
 // すべての処理を順番に実行
