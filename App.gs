@@ -3,12 +3,12 @@
  * 
  * メインアプリケーションの初期化、UI表示、イベントハンドリングを担当します。
  * 
- * バージョン: v1.4.1
- * 最終更新日: 2025-05-18
+ * バージョン: v1.4.2
+ * 最終更新日: 2025-05-19
  */
 
 // アプリケーションのバージョン情報
-const APP_VERSION = 'v1.4.1';
+const APP_VERSION = 'v1.4.2';
 
 /**
  * eBay出品作業効率化ツール
@@ -29,20 +29,6 @@ function createMenu() {
   ui.createMenu('eBayツール')
     .addItem('サイドバーを表示', 'showSidebar')
     .addSeparator()
-    .addItem('CSVインポート', 'UI.showImportDialog')
-    .addItem('CSVエクスポート', 'UI.showExportDialog')
-    .addSeparator()
-    .addSubMenu(ui.createMenu('フィルター処理')
-      .addItem('NGワードフィルタリング', 'Filters.runNgWordFilter')
-      .addItem('重複チェック', 'Filters.runDuplicateCheck')
-      .addItem('文字数制限フィルター', 'Filters.runLengthFilter')
-      .addItem('所在地情報修正', 'Filters.runLocationFix')
-      .addItem('価格フィルタリング', 'Filters.runPriceFilter')
-    )
-    .addSeparator()
-    .addItem('全処理を一括実行', 'runAllProcesses')
-    .addSeparator()
-    .addItem('設定', 'UI.showSettingsDialog')
     .addItem('ヘルプ', 'UI.showHelpDialog')
     .addToUi();
 }
