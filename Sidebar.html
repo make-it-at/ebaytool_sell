@@ -323,12 +323,12 @@
     <div class="sidebar">
       <header class="sidebar-header">
         <img src="https://www.gstatic.com/images/branding/product/1x/apps_script_48dp.png" alt="Logo" class="logo">
-        <h1>eBay出品ツール</h1>
+        <h1>みずのとい</h1>
         <p>バージョン <?= version ?></p>
       </header>
       
       <section class="section">
-        <h2>データ処理</h2>
+        <h2>CSV入出力</h2>
         <div class="file-upload-area">
           <input type="file" id="csv-file-input" accept=".csv" style="display: none;">
           <button class="btn btn-primary full-width" id="file-select-btn" style="margin-bottom: 10px;">
@@ -344,16 +344,6 @@
             <i class="fas fa-file-export"></i> CSVエクスポート
           </button>
         </div>
-      </section>
-      
-      <section class="section" id="ng-words-section">
-        <h2>NGワード管理</h2>
-        <p style="margin-bottom: 10px; font-size: 13px; color: var(--text-secondary);">
-          NGワードリストは設定シート内で管理されています。ボタンをクリックして設定を開いてください。
-        </p>
-        <button class="btn btn-secondary full-width" id="open-ng-settings-btn">
-          <i class="fas fa-cog"></i> NGワード設定を開く
-        </button>
       </section>
       
       <section class="section">
@@ -389,10 +379,13 @@
         </div>
       </section>
       
-      <section class="section">
+      <section class="section" id="ng-words-section">
         <h2>設定</h2>
-        <button class="btn btn-outline full-width" id="settings-btn">
-          <i class="fas fa-cog"></i> 設定を開く
+        <p style="margin-bottom: 10px; font-size: 13px; color: var(--text-secondary);">
+          NGワードリストは設定シート内で管理されています。ボタンをクリックして設定を開いてください。
+        </p>
+        <button class="btn btn-secondary full-width" id="open-ng-settings-btn">
+          <i class="fas fa-cog"></i> NGワード設定を開く
         </button>
       </section>
       
@@ -407,7 +400,7 @@
       <div id="notification" class="notification"></div>
       
       <footer class="sidebar-footer">
-        <p>© 2023 eBay出品ツール</p>
+        <p>© 2025 みずのとい</p>
       </footer>
     </div>
     
@@ -572,10 +565,6 @@
             .withSuccessHandler(onFilterComplete)
             .withFailureHandler(onError)
             .runAllProcesses();
-        });
-        
-        document.getElementById('settings-btn').addEventListener('click', function() {
-          google.script.run.showSettingsDialog();
         });
         
         // NGワード設定を開くボタンの設定
