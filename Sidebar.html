@@ -347,20 +347,6 @@
             <i class="fas fa-file-export"></i> CSVエクスポート
           </button>
         </div>
-        
-        <!-- CSVエクスポート用オプション -->
-        <div id="export-options" style="margin-top: 15px; display: none;">
-          <div style="margin-bottom: 10px;">
-            <label for="sheet-select" style="display: block; font-size: 13px; margin-bottom: 5px;">エクスポートするシート:</label>
-            <select id="sheet-select" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid var(--divider-color);">
-              <option value="出品データ" selected>出品データ</option>
-              <option value="データインポート">データインポート</option>
-            </select>
-          </div>
-          <button class="btn btn-success full-width" id="download-csv-btn">
-            <i class="fas fa-download"></i> CSVをダウンロード
-          </button>
-        </div>
       </section>
       
       <section class="section" id="ng-words-section">
@@ -517,18 +503,7 @@
         });
         
         document.getElementById('export-btn').addEventListener('click', function() {
-          // エクスポートオプションの表示/非表示を切り替え
-          const exportOptions = document.getElementById('export-options');
-          if (exportOptions.style.display === 'none') {
-            exportOptions.style.display = 'block';
-          } else {
-            exportOptions.style.display = 'none';
-          }
-        });
-        
-        // CSVダウンロードボタンのイベントリスナー
-        document.getElementById('download-csv-btn').addEventListener('click', function() {
-          const selectedSheet = document.getElementById('sheet-select').value;
+          // 「出品データ」シートを直接エクスポート
           showProgress('CSVエクスポートを実行中...', 0);
           
           google.script.run
@@ -537,7 +512,7 @@
               if (result && result.success) {
                 // CSVデータをダウンロード
                 downloadCSV(result.csvData, result.fileName);
-                showNotification('success', `${selectedSheet}シートからCSVファイルをエクスポートしました`);
+                showNotification('success', '出品データシートからCSVファイルをエクスポートしました');
               } else {
                 showNotification('error', result ? result.message : 'エクスポートに失敗しました');
               }
@@ -546,7 +521,7 @@
               hideProgress();
               showNotification('error', 'エラー: ' + (error.message || 'エクスポート中にエラーが発生しました'));
             })
-            .exportCsvFromSidebar(selectedSheet);
+            .exportCsvFromSidebar('出品データ');
         });
         
         document.getElementById('ngword-btn').addEventListener('click', function() {
