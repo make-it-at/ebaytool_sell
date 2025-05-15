@@ -3,12 +3,12 @@
  * 
  * メインアプリケーションの初期化、UI表示、イベントハンドリングを担当します。
  * 
- * バージョン: v1.3.8
- * 最終更新日: 2025-05-15
+ * バージョン: v1.3.9
+ * 最終更新日: 2025-05-16
  */
 
 // アプリケーションのバージョン情報
-const APP_VERSION = 'v1.3.8';
+const APP_VERSION = 'v1.3.9';
 
 /**
  * eBay出品作業効率化ツール
@@ -104,12 +104,18 @@ function runAllProcesses() {
   Logger.startProcess('全処理一括実行');
   
   try {
+    // 各フィルター処理を順次実行する前に開始時間を保存
+    const savedStartTime = Logger.processStartTime;
+    
     // 各フィルター処理を順次実行
     Filters.runNgWordFilter();
     Filters.runDuplicateCheck();
     Filters.runLengthFilter();
     Filters.runLocationFix();
     Filters.runPriceFilter();
+    
+    // 開始時間を元に戻す
+    Logger.processStartTime = savedStartTime;
     
     // 完了メッセージを表示
     UI.showSuccessMessage('すべての処理が完了しました。');
