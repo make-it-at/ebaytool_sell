@@ -340,9 +340,6 @@
           </button>
         </div>
         <div class="button-group" style="margin-top: 15px;">
-          <button class="btn btn-primary" id="import-btn">
-            <i class="fas fa-file-import"></i> インポートダイアログ
-          </button>
           <button class="btn btn-primary" id="export-btn">
             <i class="fas fa-file-export"></i> CSVエクスポート
           </button>
@@ -361,26 +358,35 @@
       
       <section class="section">
         <h2>フィルター処理</h2>
-        <div class="button-group vertical">
-          <button class="btn btn-secondary" id="ngword-btn">
-            <i class="fas fa-filter"></i> NGワード処理
-          </button>
-          <button class="btn btn-secondary" id="duplicate-btn">
-            <i class="fas fa-copy"></i> 重複チェック
-          </button>
-          <button class="btn btn-secondary" id="length-btn">
-            <i class="fas fa-text-width"></i> 文字数フィルター
-          </button>
-          <button class="btn btn-secondary" id="location-btn">
-            <i class="fas fa-map-marker-alt"></i> 所在地情報修正
-          </button>
-          <button class="btn btn-secondary" id="price-btn">
-            <i class="fas fa-dollar-sign"></i> 価格フィルター
-          </button>
-        </div>
-        <button class="btn btn-success full-width" id="run-all-btn">
+        <button class="btn btn-success full-width" id="run-all-btn" style="margin-bottom: 15px;">
           <i class="fas fa-play-circle"></i> 全処理一括実行
         </button>
+        
+        <div class="filter-toggle-container">
+          <button class="btn btn-outline full-width filter-toggle-btn" id="toggle-individual-filters">
+            <i class="fas fa-chevron-down"></i> 個別フィルター処理を表示
+          </button>
+          
+          <div class="individual-filters" style="display: none; margin-top: 10px;">
+            <div class="button-group vertical">
+              <button class="btn btn-secondary" id="ngword-btn">
+                <i class="fas fa-filter"></i> NGワード処理
+              </button>
+              <button class="btn btn-secondary" id="duplicate-btn">
+                <i class="fas fa-copy"></i> 重複チェック
+              </button>
+              <button class="btn btn-secondary" id="length-btn">
+                <i class="fas fa-text-width"></i> 文字数フィルター
+              </button>
+              <button class="btn btn-secondary" id="location-btn">
+                <i class="fas fa-map-marker-alt"></i> 所在地情報修正
+              </button>
+              <button class="btn btn-secondary" id="price-btn">
+                <i class="fas fa-dollar-sign"></i> 価格フィルター
+              </button>
+            </div>
+          </div>
+        </div>
       </section>
       
       <section class="section">
@@ -498,10 +504,6 @@
         });
         
         // 各ボタンにイベントリスナーを設定
-        document.getElementById('import-btn').addEventListener('click', function() {
-          google.script.run.showImportDialog();
-        });
-        
         document.getElementById('export-btn').addEventListener('click', function() {
           // 「出品データ」シートを直接エクスポート
           showProgress('CSVエクスポートを実行中...', 0);
@@ -579,6 +581,23 @@
         // NGワード設定を開くボタンの設定
         document.getElementById('open-ng-settings-btn').addEventListener('click', function() {
           google.script.run.openNgWordsSettings();
+        });
+        
+        // 個別フィルター処理のトグルボタン設定
+        document.getElementById('toggle-individual-filters').addEventListener('click', function() {
+          const filtersContainer = document.querySelector('.individual-filters');
+          const toggleButton = document.getElementById('toggle-individual-filters');
+          const icon = toggleButton.querySelector('i');
+          
+          if (filtersContainer.style.display === 'none') {
+            filtersContainer.style.display = 'block';
+            icon.className = 'fas fa-chevron-up';
+            toggleButton.innerHTML = '<i class="fas fa-chevron-up"></i> 個別フィルター処理を隠す';
+          } else {
+            filtersContainer.style.display = 'none';
+            icon.className = 'fas fa-chevron-down';
+            toggleButton.innerHTML = '<i class="fas fa-chevron-down"></i> 個別フィルター処理を表示';
+          }
         });
       });
       
