@@ -3,8 +3,8 @@
  * 
  * CSVのインポートとエクスポート機能を提供します。
  * 
- * バージョン: v1.3.1
- * 最終更新日: 2025-05-14
+ * バージョン: v1.4.6
+ * 最終更新日: 2025-05-23
  */
 
 // ImportExport名前空間
@@ -29,10 +29,26 @@ ImportExport.importCsv = function(csvFile) {
     }
     
     const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const importSheet = ss.getSheetByName(Config.SHEET_NAMES.IMPORT);
+    let importSheet = ss.getSheetByName(Config.SHEET_NAMES.IMPORT);
     
-    // シートをクリアして新しいデータを挿入
-    importSheet.clearContents();
+    // シートが存在しない場合は作成
+    if (!importSheet) {
+      importSheet = ss.insertSheet(Config.SHEET_NAMES.IMPORT);
+      
+      // ヘッダー行を設定（必要に応じて）
+      if (Config.SHEET_HEADERS && Config.SHEET_HEADERS.IMPORT) {
+        importSheet.getRange(1, 1, 1, Config.SHEET_HEADERS.IMPORT.length)
+          .setValues([Config.SHEET_HEADERS.IMPORT]);
+        importSheet.setFrozenRows(1);
+      }
+      
+      Logger.logInfo('データインポートシートが見つからなかったため、新規作成しました。');
+    }
+    
+    // シートをクリア
+    if (importSheet.getLastRow() > 0) {
+      importSheet.clearContents();
+    }
     
     // CSVデータをそのままシートに書き込み（加工やマッピングなし）
     if (csvData.length > 0) {

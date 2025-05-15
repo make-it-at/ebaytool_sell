@@ -330,16 +330,16 @@
         <h2>CSV入出力</h2>
         <div class="file-upload-area">
           <input type="file" id="csv-file-input" accept=".csv" style="display: none;">
-          <button class="btn btn-primary full-width" id="file-select-btn" style="margin-bottom: 10px; height: 40px;">
+          <button class="btn btn-primary full-width" id="file-select-btn" style="margin-bottom: 10px; height: 44px; padding: 8px 12px; white-space: nowrap;">
             <i class="fas fa-file-csv"></i> CSVファイルを選択
           </button>
           <div id="selected-file-display" style="font-size: 12px; margin: 5px 0; color: var(--text-secondary); word-break: break-all;"></div>
-          <button class="btn btn-success full-width" id="import-csv-btn" style="margin-bottom: 10px; display: none; height: 40px;">
+          <button class="btn btn-success full-width" id="import-csv-btn" style="margin-bottom: 10px; display: none; height: 44px; padding: 8px 12px; white-space: nowrap;">
             <i class="fas fa-file-import"></i> 選択したファイルをインポート
           </button>
         </div>
         <div class="button-group" style="margin-top: 15px;">
-          <button class="btn btn-primary full-width" id="export-btn" style="height: 40px;">
+          <button class="btn btn-primary full-width" id="export-btn" style="height: 44px; padding: 8px 12px; white-space: nowrap;">
             <i class="fas fa-file-export"></i> CSVエクスポート
           </button>
         </div>
@@ -347,30 +347,30 @@
       
       <section class="section">
         <h2>フィルター処理</h2>
-        <button class="btn btn-success full-width" id="run-all-btn" style="margin-bottom: 15px; height: 40px;">
+        <button class="btn btn-success full-width" id="run-all-btn" style="margin-bottom: 15px; height: 44px; padding: 8px 12px; white-space: nowrap;">
           <i class="fas fa-play-circle"></i> 全処理一括実行
         </button>
         
         <div class="filter-toggle-container">
-          <button class="btn btn-outline full-width filter-toggle-btn" id="toggle-individual-filters" style="height: 40px;">
+          <button class="btn btn-outline full-width filter-toggle-btn" id="toggle-individual-filters" style="height: 44px; padding: 8px 12px; white-space: nowrap;">
             <i class="fas fa-chevron-down"></i> 個別フィルター処理を表示
           </button>
           
           <div class="individual-filters" style="display: none; margin-top: 10px;">
             <div class="button-group vertical">
-              <button class="btn btn-secondary full-width" id="ngword-btn" style="height: 40px; margin-bottom: 8px;">
+              <button class="btn btn-secondary full-width" id="ngword-btn" style="height: 44px; margin-bottom: 8px; padding: 8px 12px; white-space: nowrap;">
                 <i class="fas fa-filter"></i> NGワード処理
               </button>
-              <button class="btn btn-secondary full-width" id="duplicate-btn" style="height: 40px; margin-bottom: 8px;">
+              <button class="btn btn-secondary full-width" id="duplicate-btn" style="height: 44px; margin-bottom: 8px; padding: 8px 12px; white-space: nowrap;">
                 <i class="fas fa-copy"></i> 重複チェック
               </button>
-              <button class="btn btn-secondary full-width" id="length-btn" style="height: 40px; margin-bottom: 8px;">
+              <button class="btn btn-secondary full-width" id="length-btn" style="height: 44px; margin-bottom: 8px; padding: 8px 12px; white-space: nowrap;">
                 <i class="fas fa-text-width"></i> 文字数フィルター
               </button>
-              <button class="btn btn-secondary full-width" id="location-btn" style="height: 40px; margin-bottom: 8px;">
+              <button class="btn btn-secondary full-width" id="location-btn" style="height: 44px; margin-bottom: 8px; padding: 8px 12px; white-space: nowrap;">
                 <i class="fas fa-map-marker-alt"></i> 所在地情報修正
               </button>
-              <button class="btn btn-secondary full-width" id="price-btn" style="height: 40px; margin-bottom: 8px;">
+              <button class="btn btn-secondary full-width" id="price-btn" style="height: 44px; margin-bottom: 8px; padding: 8px 12px; white-space: nowrap;">
                 <i class="fas fa-dollar-sign"></i> 価格フィルター
               </button>
             </div>
@@ -383,7 +383,7 @@
         <p style="margin-bottom: 10px; font-size: 13px; color: var(--text-secondary);">
           NGワードリストは設定シート内で管理されています。ボタンをクリックして設定を開いてください。
         </p>
-        <button class="btn btn-secondary full-width" id="open-ng-settings-btn" style="height: 40px;">
+        <button class="btn btn-secondary full-width" id="open-ng-settings-btn" style="height: 44px; padding: 8px 12px; white-space: nowrap;">
           <i class="fas fa-cog"></i> NGワード設定を開く
         </button>
       </section>
