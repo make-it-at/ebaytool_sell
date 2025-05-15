@@ -347,6 +347,20 @@
             <i class="fas fa-file-export"></i> CSVエクスポート
           </button>
         </div>
+        
+        <!-- CSVエクスポート用オプション -->
+        <div id="export-options" style="margin-top: 15px; display: none;">
+          <div style="margin-bottom: 10px;">
+            <label for="sheet-select" style="display: block; font-size: 13px; margin-bottom: 5px;">エクスポートするシート:</label>
+            <select id="sheet-select" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid var(--divider-color);">
+              <option value="出品データ" selected>出品データ</option>
+              <option value="データインポート">データインポート</option>
+            </select>
+          </div>
+          <button class="btn btn-success full-width" id="download-csv-btn">
+            <i class="fas fa-download"></i> CSVをダウンロード
+          </button>
+        </div>
       </section>
       
       <section class="section" id="ng-words-section">
@@ -503,7 +517,36 @@
         });
         
         document.getElementById('export-btn').addEventListener('click', function() {
-          google.script.run.showExportDialog();
+          // エクスポートオプションの表示/非表示を切り替え
+          const exportOptions = document.getElementById('export-options');
+          if (exportOptions.style.display === 'none') {
+            exportOptions.style.display = 'block';
+          } else {
+            exportOptions.style.display = 'none';
+          }
+        });
+        
+        // CSVダウンロードボタンのイベントリスナー
+        document.getElementById('download-csv-btn').addEventListener('click', function() {
+          const selectedSheet = document.getElementById('sheet-select').value;
+          showProgress('CSVエクスポートを実行中...', 0);
+          
+          google.script.run
+            .withSuccessHandler(function(result) {
+              hideProgress();
+              if (result && result.success) {
+                // CSVデータをダウンロード
+                downloadCSV(result.csvData, result.fileName);
+                showNotification('success', `${selectedSheet}シートからCSVファイルをエクスポートしました`);
+              } else {
+                showNotification('error', result ? result.message : 'エクスポートに失敗しました');
+              }
+            })
+            .withFailureHandler(function(error) {
+              hideProgress();
+              showNotification('error', 'エラー: ' + (error.message || 'エクスポート中にエラーが発生しました'));
+            })
+            .exportCsvFromSidebar(selectedSheet);
         });
         
         document.getElementById('ngword-btn').addEventListener('click', function() {
@@ -617,6 +660,32 @@
       // プログレスバーを非表示
       function hideProgress() {
         document.getElementById('progress-container').style.display = 'none';
+      }
+      
+      // CSVデータをダウンロードする関数
+      function downloadCSV(csvData, fileName) {
+        // データをBlobに変換
+        const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
+        
+        // IE対応のダウンロード処理
+        if (navigator.msSaveBlob) {
+          navigator.msSaveBlob(blob, fileName);
+          return;
+        }
+        
+        // それ以外のブラウザ用ダウンロード処理
+        const link = document.createElement('a');
+        if (link.download !== undefined) {
+          // Blobを指すURLを作成
+          const url = URL.createObjectURL(blob);
+          link.setAttribute('href', url);
+          link.setAttribute('download', fileName);
+          link.style.visibility = 'hidden';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+        }
       }
     </script>
   </body>

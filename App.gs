@@ -3,12 +3,12 @@
  * 
  * メインアプリケーションの初期化、UI表示、イベントハンドリングを担当します。
  * 
- * バージョン: v1.3.9
- * 最終更新日: 2025-05-16
+ * バージョン: v1.4.0
+ * 最終更新日: 2025-05-17
  */
 
 // アプリケーションのバージョン情報
-const APP_VERSION = 'v1.3.9';
+const APP_VERSION = 'v1.4.0';
 
 /**
  * eBay出品作業効率化ツール
@@ -310,14 +310,45 @@ function importCsvFromBase64(base64Data) {
 /**
  * CSVとしてエクスポートする
  * クライアント側JSからのエントリーポイント
+ * @param {string} sheetName エクスポート対象のシート名（オプション）
  * @return {string} ダウンロード用URL
  */
-function exportToCsv() {
+function exportToCsv(sheetName) {
   try {
-    return ImportExport.exportToCsv();
+    return ImportExport.exportToCsv(sheetName);
   } catch (error) {
     Logger.logError('CSVエクスポート中にエラーが発生: ' + error.message);
     return null;
+  }
+}
+
+/**
+ * サイドバーからの直接CSVエクスポート
+ * クライアント側JSからのエントリーポイント
+ * @param {string} sheetName エクスポート対象のシート名（オプション）
+ * @return {Object} エクスポートの結果（成功: true, csvData: CSVデータ, fileName: ファイル名）
+ */
+function exportCsvFromSidebar(sheetName) {
+  try {
+    const result = ImportExport.exportToCsv(sheetName);
+    if (result) {
+      return {
+        success: true,
+        csvData: result.csvData,
+        fileName: result.fileName
+      };
+    } else {
+      return {
+        success: false,
+        message: 'エクスポートに失敗しました。'
+      };
+    }
+  } catch (error) {
+    Logger.logError('サイドバーからのCSVエクスポート中にエラーが発生: ' + error.message);
+    return {
+      success: false,
+      message: error.message || 'エクスポート中にエラーが発生しました。'
+    };
   }
 }
 

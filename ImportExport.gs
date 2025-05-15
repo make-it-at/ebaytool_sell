@@ -210,18 +210,31 @@ ImportExport.mapCondition = function(conditionText) {
 /**
  * データインポートシートのデータをそのままCSVでエクスポートする
  * eBay形式に変換せず、シートの内容をそのままエクスポートする
+ * @param {string} sheetName エクスポート対象のシート名（デフォルト: 出品データ）
  * @return {Object} エクスポート結果（csvData: CSV内容, fileName: ファイル名）
  */
-ImportExport.exportToCsv = function() {
+ImportExport.exportToCsv = function(sheetName) {
   Logger.startProcess('CSVエクスポート');
   UI.showProgressBar('CSVエクスポートを実行中...');
   
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const importSheet = ss.getSheetByName(Config.SHEET_NAMES.IMPORT);
+    
+    // シート名が指定されていない場合は出品データシートをデフォルトとする
+    if (!sheetName) {
+      sheetName = Config.SHEET_NAMES.LISTING;
+    }
+    
+    // 指定されたシートを取得
+    const sheet = ss.getSheetByName(sheetName);
+    
+    // シートが存在しない場合はエラー
+    if (!sheet) {
+      throw new Error(`指定されたシート "${sheetName}" が見つかりません。`);
+    }
     
     // データ範囲を取得
-    const dataRange = importSheet.getDataRange();
+    const dataRange = sheet.getDataRange();
     const values = dataRange.getValues();
     
     UI.updateProgressBar(30);
@@ -267,14 +280,14 @@ ImportExport.exportToCsv = function() {
     
     UI.updateProgressBar(90);
     
-    // 現在の日時を取得してファイル名に追加
+    // シート名をファイル名に含める
     const now = new Date();
     const timestamp = Utilities.formatDate(now, 'Asia/Tokyo', 'yyyyMMdd_HHmmss');
-    const fileName = `ebay_export_${timestamp}.csv`;
+    const fileName = `ebay_${sheetName}_${timestamp}.csv`;
     
     // データ行数を計算（ヘッダー行を除く）
     const rowCount = Math.max(0, values.length - 1);
-    const message = `CSVエクスポートが完了しました。${rowCount}件のデータをエクスポートしました。`;
+    const message = `CSVエクスポートが完了しました。シート "${sheetName}" から${rowCount}件のデータをエクスポートしました。`;
     
     UI.updateProgressBar(100);
     UI.showSuccessMessage(message);
