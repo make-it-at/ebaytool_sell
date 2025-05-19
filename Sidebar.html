@@ -837,8 +837,10 @@
       function onFilterComplete(result) {
         hideProgress();
         if (result && result.message) {
+          // 改行を<br>タグに変換して表示
+          const formattedMessage = result.message.replace(/\n/g, '<br>');
           // 結果メッセージとして表示する（一時的な通知ではなく固定表示）
-          showResultMessage('success', '処理完了', result.message);
+          showResultMessage('success', '処理完了', formattedMessage);
         }
       }
       

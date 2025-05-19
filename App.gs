@@ -182,9 +182,12 @@ function runAllProcesses() {
     // ログ記録終了
     Logger.endProcess('全処理一括実行 成功');
     
+    // クライアント側表示用のメッセージを作成
+    const clientSideMessage = `すべての処理が完了しました（データ数: ${beforeDataCount}件 → ${afterDataCount}件, 削除: ${totalRemoved}件, 修正: ${totalModified}件）\n\n${additionalInfo}`;
+    
     return {
       success: true,
-      message: 'すべての処理が完了しました。',
+      message: clientSideMessage,
       stats: results
     };
   } catch (error) {
