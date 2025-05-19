@@ -191,6 +191,8 @@ function runAllProcesses() {
     
     // プログレスバーを非表示
     UI.hideProgressBar();
+    // 完了時に進捗を100%に
+    UI.updateProgressBar(100);
     
     // 完了メッセージをUI.showResultMessageで表示
     UI.showResultMessage(
@@ -407,6 +409,8 @@ function importCsvFromBase64(base64Data) {
         { removedCount: 0, modifiedCount: 0, totalProcessed: 0 },
         'CSVファイルのインポートが正常に完了しました。データが「出品データ」シートに反映されています。'
       );
+      // 完了時に進捗を100%に
+      UI.updateProgressBar(100);
     }
     return result;
   } catch (error) {
