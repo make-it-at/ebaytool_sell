@@ -3,12 +3,15 @@
  * 
  * ユーザーインターフェース関連の処理を提供します。
  * 
- * バージョン: v1.3.1
- * 最終更新日: 2025-05-14
+ * バージョン: v1.3.2
+ * 最終更新日: 2025-05-26
  */
 
 // UI名前空間
 const UI = {};
+
+// 直近の成功メッセージを保存するグローバル変数
+let LAST_RESULT_MESSAGE = null;
 
 /**
  * サイドバーを表示する
@@ -124,6 +127,12 @@ UI.showTestDataHelpDialog = function() {
  */
 UI.showSuccessMessage = function(message) {
   try {
+    // 直近のメッセージを保存
+    LAST_RESULT_MESSAGE = {
+      type: 'success',
+      title: '処理完了',
+      content: message
+    };
     // UIが利用可能かチェック
     try {
       SpreadsheetApp.getUi();
@@ -133,43 +142,68 @@ UI.showSuccessMessage = function(message) {
       Logger.log('UI利用不可のためログのみに記録(成功): ' + message);
       return;
     }
-    
-    // サイドバーに通知を表示
-    try {
-      // サイドバーが存在するかチェック
-      const sidebar = HtmlService.createHtmlOutput(
-        '<script>function checkSidebar() { return (typeof showNotification === "function"); }</script>'
-      );
-      
-      // サイドバー経由でメッセージを表示するコールバック関数
-      const callback = function(hasSidebar) {
-        if (hasSidebar) {
-          const script = `showNotification('success', '${message.replace(/'/g, "\\'")}');`;
-          ScriptApp.run(() => {
-            try {
-              const html = HtmlService.createHtmlOutput(`<script>${script}</script>`);
-              // 非表示のカスタム関数実行（ダイアログなし）
-              SpreadsheetApp.getActive().toast(message, '成功', 3);
-            } catch (e) {
-              Logger.log('サイドバー通知表示エラー: ' + e.message);
-            }
-          });
-        } else {
-          // サイドバーがない場合はtoastのみ使用
-          SpreadsheetApp.getActive().toast(message, '成功', 3);
-        }
-      };
-      
-      // トーストのみを使用
-      SpreadsheetApp.getActive().toast(message, '成功', 3);
-    } catch (e) {
-      // トーストのみを使用
-      SpreadsheetApp.getActive().toast(message, '成功', 3);
-    }
+    // トーストのみを使用
+    SpreadsheetApp.getActive().toast(message, '成功', 3);
   } catch (finalError) {
     // 最終的なフォールバック - ログのみ
     console.log('成功メッセージ表示失敗: ' + message);
     Logger.log('成功メッセージ表示失敗: ' + message);
+  }
+};
+
+/**
+ * 詳細な成功メッセージを表示する
+ * タイトルと詳細内容の両方を表示し、サイドバーに結果メッセージとして表示される
+ * @param {string} title メッセージのタイトル
+ * @param {string} details 詳細内容
+ */
+UI.showDetailedSuccessMessage = function(title, details) {
+  try {
+    // UIが利用可能かチェック
+    try {
+      SpreadsheetApp.getUi();
+    } catch (e) {
+      // UIが利用できない場合はログのみに記録
+      console.log(`成功: ${title}\n${details}`);
+      Logger.log(`UI利用不可のためログのみに記録(成功): ${title}\n${details}`);
+      return;
+    }
+    
+    // サイドバーに通知を表示
+    try {
+      // エスケープ処理を行う
+      const escapedTitle = title.replace(/'/g, "\\'").replace(/\n/g, "\\n");
+      const escapedDetails = details.replace(/'/g, "\\'").replace(/\n/g, "\\n");
+      
+      // サイドバーとして表示するスクリプト
+      const script = `
+        if (typeof showResultMessage === 'function') {
+          showResultMessage('success', '${escapedTitle}', '${escapedDetails}');
+        } else if (typeof showNotification === 'function') {
+          showNotification('success', '${escapedTitle}', false);
+        }
+      `;
+      
+      // スクリプトを実行
+      ScriptApp.run(() => {
+        try {
+          const html = HtmlService.createHtmlOutput(`<script>${script}</script>`);
+          // 非表示のカスタム関数実行（ダイアログなし）
+          SpreadsheetApp.getActive().toast(title, '成功', 3);
+        } catch (e) {
+          Logger.log('サイドバー通知表示エラー: ' + e.message);
+          // トーストのみを使用
+          SpreadsheetApp.getActive().toast(title, '成功', 3);
+        }
+      });
+    } catch (e) {
+      // トーストのみを使用
+      SpreadsheetApp.getActive().toast(title, '成功', 3);
+    }
+  } catch (finalError) {
+    // 最終的なフォールバック - ログのみ
+    console.log(`成功メッセージ表示失敗: ${title}\n${details}`);
+    Logger.log(`成功メッセージ表示失敗: ${title}\n${details}`);
   }
 };
 
@@ -307,4 +341,70 @@ UI.getJavaScript = function() {
  */
 UI.getStylesheet = function() {
   return HtmlService.createHtmlOutputFromFile('Stylesheet').getContent();
-}; 
+};
+
+/**
+ * 処理結果メッセージをサイドバーに表示する
+ * フィルタリング処理の詳細な結果を表示し、サイドバーに固定表示する
+ * @param {string} title メッセージのタイトル
+ * @param {Object} stats 統計情報（削除件数、修正件数など）
+ * @param {string} [additionalInfo] 追加情報（オプション）
+ */
+UI.showResultMessage = function(title, stats, additionalInfo) {
+  try {
+    // 統計情報のチェックと初期値設定
+    stats = stats || {};
+    const removedCount = stats.removedCount || 0;
+    const modifiedCount = stats.modifiedCount || 0;
+    const totalProcessed = stats.totalProcessed || 0;
+    
+    // フォーマットされた結果メッセージを作成
+    let resultMessage = `<div class="result-message">`;
+    resultMessage += `<h3>${title}</h3>`;
+    resultMessage += `<p>処理件数: ${totalProcessed}件</p>`;
+    
+    if (removedCount > 0) {
+      resultMessage += `<p>削除件数: ${removedCount}件</p>`;
+    }
+    
+    if (modifiedCount > 0) {
+      resultMessage += `<p>修正件数: ${modifiedCount}件</p>`;
+    }
+    
+    // 追加情報（設定値など）がある場合は表示
+    if (additionalInfo) {
+      resultMessage += `<p class="additional-info">${additionalInfo}</p>`;
+    }
+    
+    resultMessage += `</div>`;
+    
+    // エスケープ処理を行う
+    const escapedResultMessage = resultMessage.replace(/'/g, "\\'").replace(/\n/g, "\\n");
+    
+    // サイドバーに通知を表示
+    const script = `showResultMessageInSidebar('${escapedResultMessage}');`;
+    try {
+      const html = HtmlService.createHtmlOutput(`<script>${script}</script>`);
+      // 非表示のカスタム関数実行
+      SpreadsheetApp.getActive().toast(title, '処理完了', 3);
+      
+      // ログにも記録
+      Logger.log(`処理結果表示: ${title} (削除: ${removedCount}件, 修正: ${modifiedCount}件)`);
+    } catch (e) {
+      Logger.log('サイドバー結果表示エラー: ' + e.message);
+      // フォールバックとしてトーストとアラートを使用
+      SpreadsheetApp.getActive().toast(`${title} (削除: ${removedCount}件, 修正: ${modifiedCount}件)`, '処理完了', 5);
+    }
+  } catch (finalError) {
+    // 最終的なフォールバック - ログのみ
+    console.log('結果メッセージ表示失敗: ' + title);
+    Logger.log('結果メッセージ表示失敗: ' + title);
+  }
+};
+
+/**
+ * サイドバーから取得するための直近のメッセージ取得関数
+ */
+function getLastResultMessage() {
+  return LAST_RESULT_MESSAGE;
+} 

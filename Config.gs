@@ -11,25 +11,41 @@
 const Config = {
   // シート名
   SHEET_NAMES: {
-    IMPORT: 'データインポート',
-    LISTING: '出品データ',  // 出品データシートを追加
+    LISTING: '出品データ',  // 出品データシート
     SETTINGS: '設定',
     LOG: 'ログ',
-    TEST_DATA: 'テストデータ'  // テストデータ用シートの追加
+    TEST_DATA: 'テストデータ'  // テストデータ用シート
   },
   
   // 各シートのヘッダー
   SHEET_HEADERS: {
-    // データインポートシートのヘッダー
-    IMPORT: [
-      '商品名', 
-      '価格($)', 
-      '所在地', 
-      'コンディション', 
-      '出品者', 
-      'URL',
-      'リサーチ日',
-      '処理結果'
+    // 出品データシートのヘッダー
+    LISTING: [
+      "Action(CC=Cp1252)",
+      "CustomLabel",
+      "StartPrice",
+      "ConditionID",
+      "Title",
+      "Description",
+      "PicURL",
+      "UPC",
+      "Category",
+      "PaymentProfileName",
+      "ReturnProfileName",
+      "ShippingProfileName",
+      "Country",
+      "Location",
+      "Apply Profile Domestic",
+      "Apply Profile International",
+      "PayPalAccepted",
+      "PayPalEmailAddress",
+      "BuyerRequirements:LinkedPayPalAccount",
+      "Duration",
+      "Format",
+      "Quantity",
+      "Currency",
+      "SiteID",
+      "BestOfferEnabled"
     ],
     
     // エクスポート用eBayフォーマットのヘッダー

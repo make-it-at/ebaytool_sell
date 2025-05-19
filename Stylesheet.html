@@ -292,4 +292,51 @@ tr:nth-child(even) {
 
 tr:hover {
   background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* 結果メッセージ */
+.result-message {
+  margin: 15px 0;
+  padding: 15px;
+  border-radius: 8px;
+  background-color: rgba(76, 175, 80, 0.1);
+  border-left: 4px solid var(--primary-color);
+}
+
+.result-message h3 {
+  font-size: 16px;
+  font-weight: 500;
+  margin-bottom: 10px;
+  color: var(--primary-dark);
+}
+
+.result-message p {
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.result-message .data-count-comparison {
+  font-weight: 500;
+  font-size: 15px;
+  color: var(--text-color);
+}
+
+.result-message .change-info {
+  font-style: italic;
+  color: var(--text-secondary);
+}
+
+.result-message .additional-info {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  white-space: pre-line;
+  font-size: 13px;
+}
+
+.result-message .timestamp {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 5px;
+  text-align: right;
 } 

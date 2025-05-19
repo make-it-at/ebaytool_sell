@@ -290,6 +290,50 @@
         background-color: var(--info-color);
       }
       
+      /* 結果メッセージ表示エリア */
+      .result-message-container {
+        margin: 10px 0;
+        padding: 15px;
+        border-radius: 8px;
+        background-color: rgba(0, 0, 0, 0.02);
+        display: block; /* デフォルトで表示 */
+      }
+      
+      .result-message {
+        font-size: 14px;
+        margin-bottom: 10px;
+        padding: 15px;
+        border-radius: 4px;
+        border-left: 4px solid var(--primary-color);
+        background-color: rgba(0, 0, 0, 0.03);
+      }
+      
+      .result-message.success {
+        background-color: rgba(76, 175, 80, 0.15);
+        border-left-color: var(--success-color);
+        border-left-width: 5px;
+      }
+      
+      .result-message.error {
+        background-color: rgba(244, 67, 54, 0.1);
+        border-left-color: var(--error-color);
+      }
+      
+      .result-message.info {
+        background-color: rgba(33, 150, 243, 0.1);
+        border-left-color: var(--info-color);
+      }
+      
+      .result-message-title {
+        font-weight: 500;
+        margin-bottom: 5px;
+        color: var(--text-color);
+      }
+      
+      .result-message-content {
+        color: var(--text-secondary);
+      }
+      
       /* フォーム入力 */
       .input-group {
         display: flex;
@@ -317,6 +361,68 @@
         color: var(--text-secondary);
         border-top: 1px solid var(--divider-color);
       }
+      
+      /* プログレスバーテキスト */
+      .progress-text {
+        font-size: 12px;
+        text-align: right;
+        color: var(--text-secondary);
+      }
+      
+      /* 結果メッセージの中身のスタイル */
+      .result-message h3 {
+        font-size: 15px;
+        font-weight: 500;
+        margin-bottom: 8px;
+        color: var(--primary-dark);
+      }
+      
+      .result-message p {
+        font-size: 13px;
+        margin-bottom: 5px;
+        color: var(--text-color);
+      }
+      
+      .result-message .additional-info {
+        margin-top: 8px;
+        padding-top: 8px;
+        border-top: 1px dashed var(--divider-color);
+        font-style: italic;
+        font-size: 12px;
+        color: var(--text-secondary);
+      }
+
+      /* タイムスタンプのスタイル */
+      .result-message .timestamp {
+        font-size: 12px;
+        color: var(--text-secondary);
+        margin-bottom: 5px;
+        text-align: right;
+      }
+
+      /* データ数比較のスタイル */
+      .result-message .data-count-comparison {
+        font-weight: bold;
+        font-size: 14px;
+        margin: 8px 0;
+      }
+
+      /* 変更情報のスタイル */
+      .result-message .change-info {
+        font-style: italic;
+      }
+      
+      /* ログメッセージのスタイル */
+      .result-message .log-message {
+        margin-top: 10px;
+        font-size: 12px;
+        color: var(--text-secondary);
+        background-color: rgba(0, 0, 0, 0.03);
+        padding: 6px;
+        border-radius: 3px;
+        font-family: monospace;
+        overflow-wrap: break-word;
+      }
     </style>
   </head>
   <body>
@@ -327,7 +433,33 @@
       </header>
       
       <section class="section">
-        <h2>CSV入出力</h2>
+        <h2>使い方ガイド</h2>
+        <button class="btn btn-outline full-width" id="toggle-workflow" style="height: 44px; padding: 8px 12px; white-space: nowrap; margin-bottom: 10px;">
+          <i class="fas fa-book"></i> ワークフローを表示
+        </button>
+        
+        <div id="workflow-guide" style="display: none; margin-top: 10px; padding: 10px; background: #f5f5f5; border-radius: 4px; font-size: 13px;">
+          <h3 style="font-size: 14px; margin-bottom: 8px; color: var(--primary-dark);">基本的なワークフロー</h3>
+          <ol style="padding-left: 20px; margin-bottom: 10px;">
+            <li style="margin-bottom: 6px;">「CSVファイルを選択」ボタンでデータをインポート</li>
+            <li style="margin-bottom: 6px;">「全処理一括実行」で自動処理を実行</li>
+            <li style="margin-bottom: 6px;">「CSVエクスポート」で処理済みデータを出力</li>
+          </ol>
+          
+          <h3 style="font-size: 14px; margin: 12px 0 8px; color: var(--primary-dark);">詳細ステップ</h3>
+          <ol style="padding-left: 20px;">
+            <li style="margin-bottom: 6px;"><strong>データ準備</strong>: CSVファイルを選択してインポート</li>
+            <li style="margin-bottom: 6px;"><strong>フィルター処理</strong>: NGワード削除、重複チェック、文字数制限、所在地情報修正、価格フィルター</li>
+            <li style="margin-bottom: 6px;"><strong>データ確認</strong>: スプレッドシートで処理結果を確認</li>
+            <li style="margin-bottom: 6px;"><strong>データ出力</strong>: CSVエクスポート機能で最終データを出力</li>
+          </ol>
+          
+          <p style="margin-top: 12px; font-style: italic; color: var(--text-secondary);">※ 個別のフィルター処理は「個別フィルター処理を表示」から実行できます</p>
+        </div>
+      </section>
+      
+      <section class="section">
+        <h2>CSVインポート</h2>
         <div class="file-upload-area">
           <input type="file" id="csv-file-input" accept=".csv" style="display: none;">
           <button class="btn btn-primary full-width" id="file-select-btn" style="margin-bottom: 10px; height: 44px; padding: 8px 12px; white-space: nowrap;">
@@ -336,11 +468,6 @@
           <div id="selected-file-display" style="font-size: 12px; margin: 5px 0; color: var(--text-secondary); word-break: break-all;"></div>
           <button class="btn btn-success full-width" id="import-csv-btn" style="margin-bottom: 10px; display: none; height: 44px; padding: 8px 12px; white-space: nowrap;">
             <i class="fas fa-file-import"></i> 選択したファイルをインポート
-          </button>
-        </div>
-        <div class="button-group" style="margin-top: 15px;">
-          <button class="btn btn-primary full-width" id="export-btn" style="height: 44px; padding: 8px 12px; white-space: nowrap;">
-            <i class="fas fa-file-export"></i> CSVエクスポート
           </button>
         </div>
       </section>
@@ -378,6 +505,15 @@
         </div>
       </section>
       
+      <section class="section">
+        <h2>CSVエクスポート</h2>
+        <div class="button-group">
+          <button class="btn btn-primary full-width" id="export-btn" style="height: 44px; padding: 8px 12px; white-space: nowrap;">
+            <i class="fas fa-file-export"></i> CSVエクスポート
+          </button>
+        </div>
+      </section>
+      
       <section class="section" id="ng-words-section">
         <h2>設定</h2>
         <p style="margin-bottom: 10px; font-size: 13px; color: var(--text-secondary);">
@@ -394,6 +530,19 @@
           <div id="progress-bar" class="progress-bar" style="width: 0%"></div>
         </div>
         <p id="progress-percent">0%</p>
+      </div>
+      
+      <div id="result-message-container" class="section" style="display: block;">
+        <h2><i class="fas fa-check-circle"></i> 処理結果</h2>
+        <div id="result-message-content">
+          <div class="result-message success">
+            <h3>準備完了</h3>
+            <p>処理を実行すると、ここに結果が表示されます。</p>
+          </div>
+        </div>
+        <button id="clear-result-btn" class="btn btn-outline full-width" style="margin-top: 10px; height: 40px;">
+          <i class="fas fa-times"></i> 閉じる
+        </button>
       </div>
       
       <div id="notification" class="notification"></div>
@@ -587,17 +736,90 @@
             toggleButton.innerHTML = '<i class="fas fa-chevron-down"></i> 個別フィルター処理を表示';
           }
         });
+        
+        // ワークフロー表示のトグルボタン設定
+        document.getElementById('toggle-workflow').addEventListener('click', function() {
+          const workflowGuide = document.getElementById('workflow-guide');
+          const toggleButton = document.getElementById('toggle-workflow');
+          const icon = toggleButton.querySelector('i');
+          
+          if (workflowGuide.style.display === 'none') {
+            workflowGuide.style.display = 'block';
+            icon.className = 'fas fa-book-open';
+            toggleButton.innerHTML = '<i class="fas fa-book-open"></i> ワークフローを隠す';
+          } else {
+            workflowGuide.style.display = 'none';
+            icon.className = 'fas fa-book';
+            toggleButton.innerHTML = '<i class="fas fa-book"></i> ワークフローを表示';
+          }
+        });
+        
+        // 結果メッセージの閉じるボタン設定
+        document.getElementById('clear-result-btn').addEventListener('click', function() {
+          clearResultMessage();
+        });
+        
+        // 直近の処理メッセージを取得して表示
+        google.script.run.withSuccessHandler(function(msg) {
+          if (msg && msg.type === 'success') {
+            showResultMessage(msg.type, msg.title, msg.content);
+          }
+        }).getLastResultMessage();
       });
       
       // 通知を表示する
-      function showNotification(type, message) {
-        const notification = document.getElementById('notification');
-        notification.textContent = message;
-        notification.className = 'notification ' + type + ' show';
+      function showNotification(type, message, temporary = true) {
+        if (temporary) {
+          // 一時的な通知の場合
+          const notification = document.getElementById('notification');
+          notification.textContent = message;
+          notification.className = 'notification ' + type + ' show';
+          
+          setTimeout(function() {
+            notification.className = 'notification';
+          }, 3000);
+        } else {
+          // 固定表示の結果メッセージとして表示
+          showResultMessage(type, '', message);
+        }
+      }
+      
+      // 結果メッセージを表示する
+      function showResultMessage(type, title, content) {
+        const container = document.getElementById('result-message-container');
+        const contentElement = document.getElementById('result-message-content');
         
-        setTimeout(function() {
-          notification.className = 'notification';
-        }, 3000);
+        // コンテナを表示
+        container.style.display = 'block';
+        
+        // メッセージHTMLを生成
+        let messageHTML = `<div class="result-message ${type}">`;
+        
+        // タイトルが空の場合はデフォルトタイトルを設定
+        if (!title) {
+          if (type === 'success') {
+            title = '処理完了';
+          } else if (type === 'error') {
+            title = 'エラー';
+          } else {
+            title = 'お知らせ';
+          }
+        }
+        
+        messageHTML += `<h3>${title}</h3>`;
+        messageHTML += `<p>${content}</p>`;
+        messageHTML += `</div>`;
+        
+        // 内容を設定
+        contentElement.innerHTML = messageHTML;
+        
+        // コンテナまでスクロール
+        container.scrollIntoView({ behavior: 'smooth' });
+      }
+      
+      // 結果メッセージをクリアする
+      function clearResultMessage() {
+        document.getElementById('result-message-container').style.display = 'none';
       }
       
       // ファイルサイズをフォーマット
@@ -615,18 +837,23 @@
       function onFilterComplete(result) {
         hideProgress();
         if (result && result.message) {
-          showNotification('success', result.message);
+          // 結果メッセージとして表示する（一時的な通知ではなく固定表示）
+          showResultMessage('success', '処理完了', result.message);
         }
       }
       
       // エラー発生時の処理
       function onError(error) {
         hideProgress();
-        showNotification('error', 'エラーが発生しました: ' + error.message);
+        // エラーメッセージを固定表示
+        showResultMessage('error', 'エラーが発生しました', error.message);
       }
       
       // プログレスバーを表示
       function showProgress(message, percent) {
+        // 結果メッセージが表示されていれば隠す
+        // clearResultMessage();
+        
         document.getElementById('progress-container').style.display = 'block';
         document.getElementById('progress-message').textContent = message;
         document.getElementById('progress-bar').style.width = percent + '%';
@@ -667,6 +894,43 @@
           link.click();
           document.body.removeChild(link);
           URL.revokeObjectURL(url);
+        }
+      }
+      
+      /**
+       * サイドバーに結果メッセージを表示する
+       * @param {string} htmlContent 表示するHTMLコンテンツ
+       */
+      function showResultMessageInSidebar(htmlContent) {
+        // 結果メッセージコンテナを表示
+        const container = document.getElementById('result-message-container');
+        if (container) {
+          container.style.display = 'block';
+        }
+        
+        // 結果メッセージの内容を更新
+        const content = document.getElementById('result-message-content');
+        if (content) {
+          // 既存の内容をクリア
+          content.innerHTML = '';
+          
+          // HTML内容を追加
+          if (htmlContent.trim().indexOf('<div class="result-message success') === 0) {
+            // HTMLコンテンツが既にresult-message successクラスを持つdivで囲まれている場合
+            content.innerHTML = htmlContent;
+          } else if (htmlContent.trim().indexOf('<div class="result-message') === 0) {
+            // result-messageクラスはあるがsuccessがない場合は追加する
+            htmlContent = htmlContent.replace('class="result-message', 'class="result-message success');
+            content.innerHTML = htmlContent;
+          } else {
+            // クラスがない場合はデフォルトでsuccess適用
+            content.innerHTML = `<div class="result-message success">${htmlContent}</div>`;
+          }
+        }
+        
+        // コンテナまでスクロール
+        if (container) {
+          container.scrollIntoView({ behavior: 'smooth' });
         }
       }
     </script>

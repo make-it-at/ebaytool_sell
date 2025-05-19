@@ -3,8 +3,8 @@
  * 
  * 各種フィルタリング機能を提供します。
  * 
- * バージョン: v1.3.6
- * 最終更新日: 2025-05-14
+ * バージョン: v1.3.7
+ * 最終更新日: 2025-05-26
  */
 
 // Filters名前空間
@@ -47,6 +47,7 @@ function runPriceFilterFromEditor() {
 
 /**
  * NGワードフィルタリングを実行する
+ * @return {Object} 処理結果
  */
 Filters.runNgWordFilter = function() {
   Logger.startProcess('NGワードフィルタリング');
@@ -80,6 +81,16 @@ Filters.runNgWordFilter = function() {
     const deleteListNgWords = settings.deleteListNgWords || [];
     const deletePartNgWords = settings.deletePartNgWords || [];
     
+    // 検索用に正規化されたNGワードリストを作成
+    // 大文字・小文字の区別をなくし、連続する空白を単一の空白に置換
+    const normalizedListNgWords = deleteListNgWords.map(word => 
+      this.normalizeSearchTerm(word)
+    );
+    
+    const normalizedPartNgWords = deletePartNgWords.map(word => 
+      this.normalizeSearchTerm(word)
+    );
+    
     // 設定内容をログに出力（デバッグ用）
     Logger.log(`NGワード設定: リスト削除=${deleteListNgWords.length}件, 部分削除=${deletePartNgWords.length}件`);
     if (deleteListNgWords.length > 0) {
@@ -102,14 +113,18 @@ Filters.runNgWordFilter = function() {
       
       const title = row[titleColumnIndex]; // Title列の値
       
+      // タイトルを検索用に正規化
+      const normalizedTitle = this.normalizeSearchTerm(title);
+      
       // リスト削除NGワードのチェック
       let containsListNgWord = false;
       let matchedListNgWords = [];
       
-      for (const ngWord of deleteListNgWords) {
-        if (ngWord && title.toLowerCase().includes(ngWord.toLowerCase())) {
+      for (let i = 0; i < normalizedListNgWords.length; i++) {
+        const ngWord = normalizedListNgWords[i];
+        if (ngWord && normalizedTitle.includes(ngWord)) {
           containsListNgWord = true;
-          matchedListNgWords.push(ngWord);
+          matchedListNgWords.push(deleteListNgWords[i]); // 元の形式で記録
           break; // 1つでも見つかれば削除対象
         }
       }
@@ -123,11 +138,18 @@ Filters.runNgWordFilter = function() {
         let processedTitle = title;
         let matchedPartNgWords = [];
         
-        for (const ngWord of deletePartNgWords) {
-          if (ngWord && processedTitle.toLowerCase().includes(ngWord.toLowerCase())) {
-            matchedPartNgWords.push(ngWord);
-            // NGワードのみを削除（大文字小文字を区別せずに削除するため正規表現を使用）
-            processedTitle = processedTitle.replace(new RegExp(ngWord, 'gi'), '');
+        for (let i = 0; i < normalizedPartNgWords.length; i++) {
+          const ngWord = normalizedPartNgWords[i];
+          const originalNgWord = deletePartNgWords[i];
+          
+          if (ngWord && this.normalizeSearchTerm(processedTitle).includes(ngWord)) {
+            matchedPartNgWords.push(originalNgWord);
+            
+            // NGワードを置換する際、大文字・小文字を保持しつつ置換するため正規表現を使用
+            // 空白の違いも吸収して置換
+            const escapeRegExp = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const regexPattern = new RegExp(escapeRegExp(originalNgWord).replace(/\s+/g, '\\s+'), 'gi');
+            processedTitle = processedTitle.replace(regexPattern, '');
           }
         }
         
@@ -190,21 +212,74 @@ Filters.runNgWordFilter = function() {
       partialDeleteCount = 0; // エラーの場合は0件とする
     }
     
-    UI.showSuccessMessage(`NGワードフィルタリングが完了しました。リスト削除: ${rowsToDelete.length}件、部分削除処理: ${partialDeleteCount}件`);
+    // 結果メッセージ
+    const message = `NGワードフィルタリングが完了しました。リスト削除: ${rowsToDelete.length}件、部分削除処理: ${partialDeleteCount}件`;
+    UI.showSuccessMessage(message);
     Logger.endProcess('NGワードフィルタリング完了');
     
-    return true;
+    // 処理後のデータ行数を取得
+    const afterDataCount = listingSheet.getLastRow() - 1; // ヘッダー行を除く
+    
+    // 詳細な処理結果を表示
+    UI.showResultMessage(
+      'NGワードフィルタリング完了',
+      {
+        removedCount: rowsToDelete.length,
+        modifiedCount: partialDeleteCount,
+        totalProcessed: dataRows.length
+      },
+      `リスト削除対象NGワード: ${deleteListNgWords.length}件\n部分削除対象NGワード: ${deletePartNgWords.length}件`
+    );
+    
+    // 処理結果を返す
+    return {
+      success: true,
+      message: message,
+      stats: {
+        removedCount: rowsToDelete.length,
+        modifiedCount: partialDeleteCount,
+        totalProcessed: dataRows.length
+      }
+    };
   } catch (error) {
     Logger.logError('NGワードフィルタリング中にエラー: ' + error.message);
     UI.showErrorMessage('NGワードフィルタリング中にエラーが発生しました: ' + error.message);
-    return false;
+    return {
+      success: false,
+      message: 'NGワードフィルタリング中にエラーが発生しました: ' + error.message,
+      stats: {
+        removedCount: 0,
+        modifiedCount: 0,
+        totalProcessed: 0
+      }
+    };
   } finally {
     UI.hideProgressBar();
   }
 };
 
 /**
+ * 検索用に文字列を正規化する
+ * - 大文字・小文字を区別しないようにする（すべて小文字に変換）
+ * - 連続する空白文字を1つの空白に置換
+ * - 先頭・末尾の空白を削除
+ * 
+ * @param {string} text 正規化する文字列
+ * @return {string} 正規化された文字列
+ */
+Filters.normalizeSearchTerm = function(text) {
+  if (!text) return '';
+  
+  return text
+    .toString()
+    .toLowerCase()          // 小文字に変換
+    .replace(/\s+/g, ' ')   // 連続する空白を1つの空白に置換
+    .trim();                // 先頭・末尾の空白を削除
+};
+
+/**
  * 重複チェックを実行する
+ * @return {Object} 処理結果
  */
 Filters.runDuplicateCheck = function() {
   Logger.startProcess('重複チェック');
@@ -248,11 +323,9 @@ Filters.runDuplicateCheck = function() {
       
       // 完全一致の重複チェック
       if (uniqueTitles.has(title)) {
-        // すでに同じタイトルが存在する場合は削除対象
         rowsToDelete.push(index + 2); // +2 は1-indexedと、ヘッダー行をスキップするため
         Logger.log(`完全一致の重複を検出: "${title}"`);
       } else {
-        // 新しいタイトルを追加
         uniqueTitles.add(title);
       }
     });
@@ -266,14 +339,44 @@ Filters.runDuplicateCheck = function() {
       }
     }
     
-    UI.showSuccessMessage(`重複チェックが完了しました。${rowsToDelete.length}件の完全一致重複を除外しました。`);
+    // 結果メッセージ
+    const message = `重複チェックが完了しました。${rowsToDelete.length}件の重複を削除しました。`;
+    UI.showSuccessMessage(message);
     Logger.endProcess('重複チェック完了');
     
-    return true;
+    // 処理後のデータ行数を取得
+    const afterDataCount = listingSheet.getLastRow() - 1; // ヘッダー行を除く
+    
+    // 詳細な処理結果を表示
+    UI.showResultMessage(
+      '重複チェック完了',
+      {
+        removedCount: rowsToDelete.length,
+        totalProcessed: dataRows.length
+      },
+      null
+    );
+    
+    // 処理結果を返す
+    return {
+      success: true,
+      message: message,
+      stats: {
+        removedCount: rowsToDelete.length,
+        totalProcessed: dataRows.length
+      }
+    };
   } catch (error) {
     Logger.logError('重複チェック中にエラー: ' + error.message);
     UI.showErrorMessage('重複チェック中にエラーが発生しました: ' + error.message);
-    return false;
+    return {
+      success: false,
+      message: '重複チェック中にエラーが発生しました: ' + error.message,
+      stats: {
+        removedCount: 0,
+        totalProcessed: 0
+      }
+    };
   } finally {
     UI.hideProgressBar();
   }
@@ -328,6 +431,7 @@ Filters.levenshteinDistance = function(a, b) {
 
 /**
  * 文字数制限フィルターを実行する
+ * @return {Object} 処理結果
  */
 Filters.runLengthFilter = function() {
   Logger.startProcess('文字数制限フィルタリング');
@@ -395,14 +499,47 @@ Filters.runLengthFilter = function() {
       }
     }
     
-    UI.showSuccessMessage(`文字数制限フィルタリングが完了しました。${rowsToDelete.length}件が${characterLimit}文字以下でスキップされました。`);
+    // 結果メッセージ
+    const message = `文字数制限フィルタリングが完了しました。${rowsToDelete.length}件削除しました（${characterLimit}文字以上を削除）。`;
+    UI.showSuccessMessage(message);
     Logger.endProcess('文字数制限フィルタリング完了');
     
-    return true;
+    // 処理後のデータ行数を取得
+    const afterDataCount = listingSheet.getLastRow() - 1; // ヘッダー行を除く
+    
+    // 詳細な処理結果を表示
+    UI.showResultMessage(
+      '文字数制限フィルタリング完了',
+      {
+        removedCount: rowsToDelete.length,
+        characterLimit: characterLimit,
+        totalProcessed: dataRows.length
+      },
+      `文字数制限: ${characterLimit}文字以上を削除`
+    );
+    
+    // 処理結果を返す
+    return {
+      success: true,
+      message: message,
+      stats: {
+        removedCount: rowsToDelete.length,
+        characterLimit: characterLimit,
+        totalProcessed: dataRows.length
+      }
+    };
   } catch (error) {
     Logger.logError('文字数制限フィルタリング中にエラー: ' + error.message);
     UI.showErrorMessage('文字数制限フィルタリング中にエラーが発生しました: ' + error.message);
-    return false;
+    return {
+      success: false,
+      message: '文字数制限フィルタリング中にエラーが発生しました: ' + error.message,
+      stats: {
+        removedCount: 0,
+        characterLimit: 0,
+        totalProcessed: 0
+      }
+    };
   } finally {
     UI.hideProgressBar();
   }
@@ -410,6 +547,7 @@ Filters.runLengthFilter = function() {
 
 /**
  * 所在地情報修正を実行する
+ * @return {Object} 処理結果
  */
 Filters.runLocationFix = function() {
   Logger.startProcess('所在地情報修正');
@@ -499,14 +637,44 @@ Filters.runLocationFix = function() {
     
     UI.updateProgressBar(100);
     
-    UI.showSuccessMessage(`所在地情報の修正が完了しました。${updatedLocations.length}件の所在地情報を修正しました。`);
+    // 結果メッセージ
+    const message = `所在地情報の修正が完了しました。${updatedLocations.length}件の所在地情報を修正しました。`;
+    UI.showSuccessMessage(message);
     Logger.endProcess('所在地情報修正完了');
     
-    return true;
+    // 処理後のデータ行数を取得
+    const afterDataCount = listingSheet.getLastRow() - 1; // ヘッダー行を除く
+    
+    // 詳細な処理結果を表示
+    UI.showResultMessage(
+      '所在地情報修正完了',
+      {
+        modifiedCount: updatedLocations.length,
+        totalProcessed: dataRows.length
+      },
+      `適用パターン数: ${updatedLocations.length}件`
+    );
+    
+    // 処理結果を返す
+    return {
+      success: true,
+      message: message,
+      stats: {
+        modifiedCount: updatedLocations.length,
+        totalProcessed: dataRows.length
+      }
+    };
   } catch (error) {
     Logger.logError('所在地情報修正中にエラー: ' + error.message);
     UI.showErrorMessage('所在地情報修正中にエラーが発生しました: ' + error.message);
-    return false;
+    return {
+      success: false,
+      message: '所在地情報修正中にエラーが発生しました: ' + error.message,
+      stats: {
+        modifiedCount: 0,
+        totalProcessed: 0
+      }
+    };
   } finally {
     UI.hideProgressBar();
   }
@@ -514,6 +682,7 @@ Filters.runLocationFix = function() {
 
 /**
  * 価格フィルタリングを実行する
+ * @return {Object} 処理結果
  */
 Filters.runPriceFilter = function() {
   Logger.startProcess('価格フィルタリング');
@@ -587,14 +756,47 @@ Filters.runPriceFilter = function() {
       }
     }
     
-    UI.showSuccessMessage(`価格フィルタリングが完了しました。${rowsToDelete.length}件が$${priceThreshold}以下で除外されました。`);
+    // 結果メッセージ
+    const message = `価格フィルタリングが完了しました。${rowsToDelete.length}件削除しました（${priceThreshold}ドル以下を削除）。`;
+    UI.showSuccessMessage(message);
     Logger.endProcess('価格フィルタリング完了');
     
-    return true;
+    // 処理後のデータ行数を取得
+    const afterDataCount = listingSheet.getLastRow() - 1; // ヘッダー行を除く
+    
+    // 詳細な処理結果を表示
+    UI.showResultMessage(
+      '価格フィルタリング完了',
+      {
+        removedCount: rowsToDelete.length,
+        priceThreshold: priceThreshold,
+        totalProcessed: dataRows.length
+      },
+      `価格下限: ${priceThreshold}ドル以下を削除`
+    );
+    
+    // 処理結果を返す
+    return {
+      success: true,
+      message: message,
+      stats: {
+        removedCount: rowsToDelete.length,
+        priceThreshold: priceThreshold,
+        totalProcessed: dataRows.length
+      }
+    };
   } catch (error) {
     Logger.logError('価格フィルタリング中にエラー: ' + error.message);
     UI.showErrorMessage('価格フィルタリング中にエラーが発生しました: ' + error.message);
-    return false;
+    return {
+      success: false,
+      message: '価格フィルタリング中にエラーが発生しました: ' + error.message,
+      stats: {
+        removedCount: 0,
+        priceThreshold: 0,
+        totalProcessed: 0
+      }
+    };
   } finally {
     UI.hideProgressBar();
   }

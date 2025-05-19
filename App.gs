@@ -1,17 +1,17 @@
 /**
- * eBay出品作業効率化ツール - メインアプリケーション
+ * eBayツール出品ファイル加工ツール - メインアプリケーション
  * 
  * メインアプリケーションの初期化、UI表示、イベントハンドリングを担当します。
  * 
- * バージョン: v1.4.6
- * 最終更新日: 2025-05-23
+ * バージョン: v1.4.8
+ * 最終更新日: 2025-05-26
  */
 
 // アプリケーションのバージョン情報
-const APP_VERSION = 'v1.4.6';
+const APP_VERSION = 'v1.4.8';
 
 /**
- * eBay出品作業効率化ツール
+ * eBayツール出品ファイル加工ツール
  * 
  * このスクリプトはeBay出品作業を効率化するためのGoogle Apps Scriptプロジェクトです。
  * 商品データの処理、フィルタリング、eBayフォーマットへの変換を自動化します。
@@ -41,7 +41,7 @@ function showSidebar() {
   template.version = APP_VERSION;
   
   const html = template.evaluate()
-    .setTitle('eBay出品ツール')
+    .setTitle('eBayツール出品ファイル加工ツール')
     .setWidth(300);
   SpreadsheetApp.getUi().showSidebar(html);
 }
@@ -93,25 +93,84 @@ function runAllProcesses() {
     // 各フィルター処理を順次実行する前に開始時間を保存
     const savedStartTime = Logger.processStartTime;
     
-    // 各フィルター処理を順次実行
-    Filters.runNgWordFilter();
-    Filters.runDuplicateCheck();
-    Filters.runLengthFilter();
-    Filters.runLocationFix();
-    Filters.runPriceFilter();
+    // 結果を格納する変数を初期化
+    const results = {
+      ngWordFilter: { removed: 0, modified: 0 },
+      duplicateCheck: { removed: 0 },
+      lengthFilter: { removed: 0, limit: 0 },
+      locationFix: { modified: 0 },
+      priceFilter: { removed: 0, threshold: 0 }
+    };
+    
+    // NGワードフィルター実行
+    const ngWordResult = Filters.runNgWordFilter();
+    if (ngWordResult && ngWordResult.stats) {
+      results.ngWordFilter.removed = ngWordResult.stats.removedCount || 0;
+      results.ngWordFilter.modified = ngWordResult.stats.modifiedCount || 0;
+    }
+    
+    // 重複チェック実行
+    const duplicateResult = Filters.runDuplicateCheck();
+    if (duplicateResult && duplicateResult.stats) {
+      results.duplicateCheck.removed = duplicateResult.stats.removedCount || 0;
+    }
+    
+    // 文字数フィルター実行
+    const lengthResult = Filters.runLengthFilter();
+    if (lengthResult && lengthResult.stats) {
+      results.lengthFilter.removed = lengthResult.stats.removedCount || 0;
+      results.lengthFilter.limit = lengthResult.stats.characterLimit || 0;
+    }
+    
+    // 所在地情報修正実行
+    const locationResult = Filters.runLocationFix();
+    if (locationResult && locationResult.stats) {
+      results.locationFix.modified = locationResult.stats.modifiedCount || 0;
+    }
+    
+    // 価格フィルター実行
+    const priceResult = Filters.runPriceFilter();
+    if (priceResult && priceResult.stats) {
+      results.priceFilter.removed = priceResult.stats.removedCount || 0;
+      results.priceFilter.threshold = priceResult.stats.priceThreshold || 0;
+    }
     
     // 開始時間を元に戻す
     Logger.processStartTime = savedStartTime;
     
+    // 処理結果の詳細メッセージを作成
+    const totalRemoved = results.ngWordFilter.removed + results.duplicateCheck.removed + 
+                         results.lengthFilter.removed + results.priceFilter.removed;
+    const totalModified = results.ngWordFilter.modified + results.locationFix.modified;
+    
+    const resultSummary = 
+      `処理完了（削除: ${totalRemoved}件, 修正: ${totalModified}件）\n\n` +
+      `■ NGワード処理: ${results.ngWordFilter.removed}件削除, ${results.ngWordFilter.modified}件修正\n` +
+      `■ 重複チェック: ${results.duplicateCheck.removed}件削除\n` +
+      `■ 文字数制限(${results.lengthFilter.limit}文字以下): ${results.lengthFilter.removed}件削除\n` +
+      `■ 所在地情報: ${results.locationFix.modified}件修正\n` +
+      `■ 価格フィルター($${results.priceFilter.threshold}以下): ${results.priceFilter.removed}件削除`;
+    
     // 完了メッセージを表示
-    UI.showSuccessMessage('すべての処理が完了しました。');
+    UI.showDetailedSuccessMessage('すべての処理が完了しました', resultSummary);
     
     // ログ記録終了
     Logger.endProcess('全処理一括実行 成功');
+    
+    return {
+      success: true,
+      message: 'すべての処理が完了しました。',
+      stats: results
+    };
   } catch (error) {
     // エラー発生時
     Logger.logError('全処理一括実行中にエラーが発生: ' + error.message);
     UI.showErrorMessage('処理中にエラーが発生しました: ' + error.message);
+    
+    return {
+      success: false,
+      message: '処理中にエラーが発生しました: ' + error.message
+    };
   }
 }
 

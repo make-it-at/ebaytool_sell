@@ -29,31 +29,31 @@ ImportExport.importCsv = function(csvFile) {
     }
     
     const ss = SpreadsheetApp.getActiveSpreadsheet();
-    let importSheet = ss.getSheetByName(Config.SHEET_NAMES.IMPORT);
+    let listingSheet = ss.getSheetByName(Config.SHEET_NAMES.LISTING);
     
     // シートが存在しない場合は作成
-    if (!importSheet) {
-      importSheet = ss.insertSheet(Config.SHEET_NAMES.IMPORT);
+    if (!listingSheet) {
+      listingSheet = ss.insertSheet(Config.SHEET_NAMES.LISTING);
       
       // ヘッダー行を設定（必要に応じて）
-      if (Config.SHEET_HEADERS && Config.SHEET_HEADERS.IMPORT) {
-        importSheet.getRange(1, 1, 1, Config.SHEET_HEADERS.IMPORT.length)
-          .setValues([Config.SHEET_HEADERS.IMPORT]);
-        importSheet.setFrozenRows(1);
+      if (Config.SHEET_HEADERS && Config.SHEET_HEADERS.LISTING) {
+        listingSheet.getRange(1, 1, 1, Config.SHEET_HEADERS.LISTING.length)
+          .setValues([Config.SHEET_HEADERS.LISTING]);
+        listingSheet.setFrozenRows(1);
       }
       
-      Logger.logInfo('データインポートシートが見つからなかったため、新規作成しました。');
+      Logger.logInfo('出品データシートが見つからなかったため、新規作成しました。');
     }
     
     // シートをクリア
-    if (importSheet.getLastRow() > 0) {
-      importSheet.clearContents();
+    if (listingSheet.getLastRow() > 0) {
+      listingSheet.clearContents();
     }
     
     // CSVデータをそのままシートに書き込み（加工やマッピングなし）
     if (csvData.length > 0) {
       // 全データを一度に書き込み
-      importSheet.getRange(1, 1, csvData.length, csvData[0].length).setValues(csvData);
+      listingSheet.getRange(1, 1, csvData.length, csvData[0].length).setValues(csvData);
       
       // 進捗バーを更新
       UI.updateProgressBar(100);
@@ -104,7 +104,7 @@ ImportExport.createHeaderMapping = function(sourceHeaders, targetHeaders) {
 };
 
 /**
- * データインポートシートのデータをeBay形式にフォーマットしてCSVエクスポート
+ * 出品データシートのデータをeBay形式にフォーマットしてCSVエクスポート
  * @return {Array} eBay形式のデータ（ヘッダー行を含む）
  */
 ImportExport.formatForEbay = function() {
@@ -113,10 +113,10 @@ ImportExport.formatForEbay = function() {
   
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const importSheet = ss.getSheetByName(Config.SHEET_NAMES.IMPORT);
+    const listingSheet = ss.getSheetByName(Config.SHEET_NAMES.LISTING);
     
     // データ範囲を取得
-    const dataRange = importSheet.getDataRange();
+    const dataRange = listingSheet.getDataRange();
     const values = dataRange.getValues();
     
     // ヘッダー行をスキップ
@@ -224,7 +224,7 @@ ImportExport.mapCondition = function(conditionText) {
 };
 
 /**
- * データインポートシートのデータをそのままCSVでエクスポートする
+ * 出品データシートの内容をそのままCSVでエクスポートする
  * eBay形式に変換せず、シートの内容をそのままエクスポートする
  * @param {string} sheetName エクスポート対象のシート名（デフォルト: 出品データ）
  * @return {Object} エクスポート結果（csvData: CSV内容, fileName: ファイル名）
