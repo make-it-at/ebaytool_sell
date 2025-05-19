@@ -3,8 +3,8 @@
  * 
  * ユーザーインターフェース関連の処理を提供します。
  * 
- * バージョン: v1.3.3
- * 最終更新日: 2025-05-27
+ * バージョン: v1.3.4
+ * 最終更新日: 2025-05-28
  */
 
 // UI名前空間
@@ -12,6 +12,9 @@ const UI = {};
 
 // 直近の成功メッセージを保存するグローバル変数
 let LAST_RESULT_MESSAGE = null;
+
+// 直近のプログレス状態を保存するグローバル変数
+let LAST_PROGRESS_STATE = null;
 
 /**
  * サイドバーを表示する
@@ -142,8 +145,10 @@ UI.showSuccessMessage = function(message) {
       Logger.log('UI利用不可のためログのみに記録(成功): ' + message);
       return;
     }
-    // トーストのみを使用
-    SpreadsheetApp.getActive().toast(message, '成功', 3);
+    
+    // トースト通知は表示しない（削除）
+    // ログのみに記録
+    Logger.log('成功: ' + message);
   } catch (finalError) {
     // 最終的なフォールバック - ログのみ
     console.log('成功メッセージ表示失敗: ' + message);
@@ -267,18 +272,34 @@ UI.showProgressBar = function(message) {
       return;
     }
     
-    // サイドバーを通じてプログレスバーを表示/更新
+    // 現在のプログレスバー状態を保存
+    LAST_PROGRESS_STATE = {
+      message: message,
+      percent: 0,
+      isVisible: true
+    };
+    
+    // ログに記録
+    Logger.log(`プログレスバー表示: ${message}`);
+    
     try {
-      // サイドバーのみに表示
-      const html = HtmlService.createHtmlOutput(
-        '<script>if (window.parent && window.parent.showProgress) { window.parent.showProgress("' + message + '", 0); }</script>'
-      );
+      // サイドバー直接更新
+      const script = `
+        if (typeof showProgress === 'function') {
+          showProgress('${message.replace(/'/g, "\\'")}', 0);
+        }
+      `;
+      
+      // サイドバーにスクリプトを送信（モードレスダイアログを使用）
+      const html = HtmlService.createHtmlOutput(`<script>${script}</script>`)
+        .setWidth(1).setHeight(1);
       SpreadsheetApp.getUi().showModelessDialog(html, '');
     } catch (e) {
-      // エラーが発生した場合は無視（サイドバーが表示されていない可能性あり）
+      Logger.log('プログレスバー表示エラー: ' + e.message);
     }
   } catch (finalError) {
     // すべてのエラーを無視
+    Logger.log('プログレスバー表示で致命的エラー: ' + finalError.message);
   }
 };
 
@@ -296,13 +317,25 @@ UI.updateProgressBar = function(percent) {
       return;
     }
     
-    // サイドバーのみに表示
-    const html = HtmlService.createHtmlOutput(
-      '<script>if (window.parent && window.parent.updateProgress) { window.parent.updateProgress(' + percent + '); }</script>'
-    );
-    SpreadsheetApp.getUi().showModelessDialog(html, '');
+    // 現在のプログレスバー状態を更新
+    if (LAST_PROGRESS_STATE) {
+      LAST_PROGRESS_STATE.percent = percent;
+    }
+    
+    // ログに進捗を記録（10%単位）
+    if (percent % 10 === 0) {
+      Logger.log(`プログレス更新: ${percent}%`);
+    }
+    
+    // サイドバーのshowProgressMessageを呼び出す
+    const functionName = "updateSidebarProgressBar";
+    const args = [percent];
+    
+    // 直接サイドバー関数を呼び出す（グローバル関数経由）
+    updateSidebarProgressBar(percent);
   } catch (e) {
     // エラーが発生した場合は無視
+    Logger.log('プログレスバー更新エラー: ' + e.message);
   }
 };
 
@@ -319,13 +352,19 @@ UI.hideProgressBar = function() {
       return;
     }
     
-    // サイドバーのみに表示
-    const html = HtmlService.createHtmlOutput(
-      '<script>if (window.parent && window.parent.hideProgress) { window.parent.hideProgress(); }</script>'
-    );
-    SpreadsheetApp.getUi().showModelessDialog(html, '');
+    // プログレスバー状態をリセット
+    if (LAST_PROGRESS_STATE) {
+      LAST_PROGRESS_STATE.isVisible = false;
+    }
+    
+    // ログに記録
+    Logger.log('プログレスバー非表示');
+    
+    // 直接サイドバー関数を呼び出す（グローバル関数経由）
+    hideSidebarProgressBar();
   } catch (e) {
     // エラーが発生した場合は無視
+    Logger.log('プログレスバー非表示エラー: ' + e.message);
   }
 };
 
@@ -393,15 +432,13 @@ UI.showResultMessage = function(title, stats, additionalInfo) {
     const script = `showResultMessageInSidebar('${escapedResultMessage}');`;
     try {
       const html = HtmlService.createHtmlOutput(`<script>${script}</script>`);
-      // 非表示のカスタム関数実行
-      SpreadsheetApp.getActive().toast(title, '処理完了', 3);
+      // トースト通知は表示しない（削除）
       
       // ログにも記録
       Logger.log(`処理結果表示: ${title} (削除: ${removedCount}件, 修正: ${modifiedCount}件)`);
     } catch (e) {
       Logger.log('サイドバー結果表示エラー: ' + e.message);
-      // フォールバックとしてトーストとアラートを使用
-      SpreadsheetApp.getActive().toast(`${title} (削除: ${removedCount}件, 修正: ${modifiedCount}件)`, '処理完了', 5);
+      // トースト通知は表示しない（削除）
     }
   } catch (finalError) {
     // 最終的なフォールバック - ログのみ
@@ -415,4 +452,49 @@ UI.showResultMessage = function(title, stats, additionalInfo) {
  */
 function getLastResultMessage() {
   return LAST_RESULT_MESSAGE;
+}
+
+/**
+ * サイドバーからのプログレスバー状態取得用グローバル関数
+ */
+function getProgressState() {
+  return LAST_PROGRESS_STATE;
+}
+
+/**
+ * サイドバーのプログレスバーを更新するグローバル関数
+ */
+function updateSidebarProgressBar(percent) {
+  try {
+    const script = `
+      if (typeof updateProgress === 'function') {
+        updateProgress(${percent});
+      }
+    `;
+    const output = HtmlService.createHtmlOutput(`<script>${script}</script>`);
+    SpreadsheetApp.getUi().showModelessDialog(output, "進捗を更新中...");
+    return true;
+  } catch (e) {
+    Logger.log('サイドバープログレス更新エラー: ' + e.message);
+    return false;
+  }
+}
+
+/**
+ * サイドバーのプログレスバーを非表示にするグローバル関数
+ */
+function hideSidebarProgressBar() {
+  try {
+    const script = `
+      if (typeof hideProgress === 'function') {
+        hideProgress();
+      }
+    `;
+    const output = HtmlService.createHtmlOutput(`<script>${script}</script>`);
+    SpreadsheetApp.getUi().showModelessDialog(output, "プログレスを閉じています...");
+    return true;
+  } catch (e) {
+    Logger.log('サイドバープログレス非表示エラー: ' + e.message);
+    return false;
+  }
 } 

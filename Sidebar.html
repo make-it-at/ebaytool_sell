@@ -860,6 +860,9 @@
         document.getElementById('progress-message').textContent = message;
         document.getElementById('progress-bar').style.width = percent + '%';
         document.getElementById('progress-percent').textContent = percent + '%';
+        
+        // プログレス更新タイマーを開始
+        startProgressUpdateTimer();
       }
       
       // プログレスバーを更新
@@ -871,6 +874,46 @@
       // プログレスバーを非表示
       function hideProgress() {
         document.getElementById('progress-container').style.display = 'none';
+        
+        // プログレス更新タイマーを停止
+        stopProgressUpdateTimer();
+      }
+      
+      // プログレス更新タイマーID
+      let progressUpdateTimerId = null;
+      
+      // プログレス更新タイマーを開始
+      function startProgressUpdateTimer() {
+        // 既存のタイマーがあれば停止
+        stopProgressUpdateTimer();
+        
+        // 新しいタイマーを開始（2秒ごとに更新）
+        progressUpdateTimerId = setInterval(function() {
+          // サーバーから最新のプログレス状態を取得
+          google.script.run
+            .withSuccessHandler(function(progressState) {
+              if (progressState) {
+                // 状態が非表示なら、プログレスバーを隠す
+                if (!progressState.isVisible) {
+                  hideProgress();
+                  return;
+                }
+                
+                // メッセージとパーセンテージを更新
+                document.getElementById('progress-message').textContent = progressState.message || '処理中...';
+                updateProgress(progressState.percent || 0);
+              }
+            })
+            .getProgressState();
+        }, 2000);
+      }
+      
+      // プログレス更新タイマーを停止
+      function stopProgressUpdateTimer() {
+        if (progressUpdateTimerId !== null) {
+          clearInterval(progressUpdateTimerId);
+          progressUpdateTimerId = null;
+        }
       }
       
       // CSVデータをダウンロードする関数
