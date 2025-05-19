@@ -3,7 +3,7 @@
  * 
  * ユーザーインターフェース関連の処理を提供します。
  * 
- * バージョン: v1.3.6
+ * バージョン: v1.3.7
  * 最終更新日: 2025-05-29
  */
 
@@ -280,24 +280,21 @@ function loadProgressState() {
  */
 UI.showProgressBar = function(message) {
   try {
-    // UIが利用可能かチェック
     try {
       SpreadsheetApp.getUi();
     } catch (e) {
       console.log('処理中: ' + message);
       return;
     }
-    // PropertiesServiceに保存
     const state = {
       message: message,
       percent: 0,
       isVisible: true
     };
     saveProgressState(state);
-    Logger.log(`プログレスバー表示: ${message}`);
     return true;
   } catch (finalError) {
-    Logger.log('プログレスバー表示で致命的エラー: ' + finalError.message);
+    // ログ出力はここでは行わない
   }
 };
 
@@ -312,16 +309,12 @@ UI.updateProgressBar = function(percent) {
     } catch (e) {
       return;
     }
-    // PropertiesServiceから取得して更新
     let state = loadProgressState() || { message: '', percent: 0, isVisible: true };
     state.percent = percent;
     saveProgressState(state);
-    if (percent % 10 === 0) {
-      Logger.log(`プログレス更新: ${percent}%`);
-    }
     return true;
   } catch (e) {
-    Logger.log('プログレスバー更新エラー: ' + e.message);
+    // ログ出力はここでは行わない
   }
 };
 
@@ -335,14 +328,12 @@ UI.hideProgressBar = function() {
     } catch (e) {
       return;
     }
-    // PropertiesServiceから取得して非表示に
     let state = loadProgressState() || { message: '', percent: 100, isVisible: true };
     state.isVisible = false;
     saveProgressState(state);
-    Logger.log('プログレスバー非表示');
     return true;
   } catch (e) {
-    Logger.log('プログレスバー非表示エラー: ' + e.message);
+    // ログ出力はここでは行わない
   }
 };
 
