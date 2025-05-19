@@ -3,12 +3,12 @@
  * 
  * メインアプリケーションの初期化、UI表示、イベントハンドリングを担当します。
  * 
- * バージョン: v1.4.10
- * 最終更新日: 2025-05-28
+ * バージョン: v1.4.11
+ * 最終更新日: 2025-05-29
  */
 
 // アプリケーションのバージョン情報
-const APP_VERSION = 'v1.4.10';
+const APP_VERSION = 'v1.4.11';
 
 /**
  * eBayツール出品ファイル加工ツール
@@ -114,38 +114,61 @@ function runAllProcesses() {
       priceFilter: { removed: 0, threshold: 0 }
     };
     
+    // プログレスバーの更新
+    UI.updateProgressBar(10);
+    
     // NGワードフィルター実行
+    UI.showProgressBar('NGワードフィルタリングを実行中...');
     const ngWordResult = Filters.runNgWordFilter();
     if (ngWordResult && ngWordResult.stats) {
       results.ngWordFilter.removed = ngWordResult.stats.removedCount || 0;
       results.ngWordFilter.modified = ngWordResult.stats.modifiedCount || 0;
     }
     
+    // プログレスバーの更新
+    UI.updateProgressBar(30);
+    
     // 重複チェック実行
+    UI.showProgressBar('重複チェックを実行中...');
     const duplicateResult = Filters.runDuplicateCheck();
     if (duplicateResult && duplicateResult.stats) {
       results.duplicateCheck.removed = duplicateResult.stats.removedCount || 0;
     }
     
+    // プログレスバーの更新
+    UI.updateProgressBar(50);
+    
     // 文字数フィルター実行
+    UI.showProgressBar('文字数フィルタリングを実行中...');
     const lengthResult = Filters.runLengthFilter();
     if (lengthResult && lengthResult.stats) {
       results.lengthFilter.removed = lengthResult.stats.removedCount || 0;
       results.lengthFilter.limit = lengthResult.stats.characterLimit || 0;
     }
     
+    // プログレスバーの更新
+    UI.updateProgressBar(70);
+    
     // 所在地情報修正実行
+    UI.showProgressBar('所在地情報修正を実行中...');
     const locationResult = Filters.runLocationFix();
     if (locationResult && locationResult.stats) {
       results.locationFix.modified = locationResult.stats.modifiedCount || 0;
     }
     
+    // プログレスバーの更新
+    UI.updateProgressBar(90);
+    
     // 価格フィルター実行
+    UI.showProgressBar('価格フィルタリングを実行中...');
     const priceResult = Filters.runPriceFilter();
     if (priceResult && priceResult.stats) {
       results.priceFilter.removed = priceResult.stats.removedCount || 0;
       results.priceFilter.threshold = priceResult.stats.priceThreshold || 0;
     }
+    
+    // プログレスバーの更新
+    UI.updateProgressBar(100);
     
     // 開始時間を元に戻す
     Logger.processStartTime = savedStartTime;
@@ -165,6 +188,9 @@ function runAllProcesses() {
       `■ 文字数制限(${results.lengthFilter.limit}文字以下): ${results.lengthFilter.removed}件削除\n` +
       `■ 所在地情報: ${results.locationFix.modified}件修正\n` +
       `■ 価格フィルター($${results.priceFilter.threshold}以下): ${results.priceFilter.removed}件削除`;
+    
+    // プログレスバーを非表示
+    UI.hideProgressBar();
     
     // 完了メッセージをUI.showResultMessageで表示
     UI.showResultMessage(

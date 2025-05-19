@@ -3,8 +3,8 @@
  * 
  * ユーザーインターフェース関連の処理を提供します。
  * 
- * バージョン: v1.3.4
- * 最終更新日: 2025-05-28
+ * バージョン: v1.3.5
+ * 最終更新日: 2025-05-29
  */
 
 // UI名前空間
@@ -282,18 +282,11 @@ UI.showProgressBar = function(message) {
     // ログに記録
     Logger.log(`プログレスバー表示: ${message}`);
     
+    // サイドバー特定のHTMLを評価
     try {
-      // サイドバー直接更新
-      const script = `
-        if (typeof showProgress === 'function') {
-          showProgress('${message.replace(/'/g, "\\'")}', 0);
-        }
-      `;
-      
-      // サイドバーにスクリプトを送信（モードレスダイアログを使用）
-      const html = HtmlService.createHtmlOutput(`<script>${script}</script>`)
-        .setWidth(1).setHeight(1);
-      SpreadsheetApp.getUi().showModelessDialog(html, '');
+      // サイドバーに状態を保存（モーダレスダイアログではなく、後で自動的に取得される）
+      // サイドバーが自動検出するので、ダイアログは表示しない
+      return true;
     } catch (e) {
       Logger.log('プログレスバー表示エラー: ' + e.message);
     }
@@ -327,12 +320,8 @@ UI.updateProgressBar = function(percent) {
       Logger.log(`プログレス更新: ${percent}%`);
     }
     
-    // サイドバーのshowProgressMessageを呼び出す
-    const functionName = "updateSidebarProgressBar";
-    const args = [percent];
-    
-    // 直接サイドバー関数を呼び出す（グローバル関数経由）
-    updateSidebarProgressBar(percent);
+    // サイドバーが自動検出するので、直接の更新は行わない
+    return true;
   } catch (e) {
     // エラーが発生した場合は無視
     Logger.log('プログレスバー更新エラー: ' + e.message);
@@ -360,8 +349,8 @@ UI.hideProgressBar = function() {
     // ログに記録
     Logger.log('プログレスバー非表示');
     
-    // 直接サイドバー関数を呼び出す（グローバル関数経由）
-    hideSidebarProgressBar();
+    // サイドバーが自動検出するので、直接の更新は行わない
+    return true;
   } catch (e) {
     // エラーが発生した場合は無視
     Logger.log('プログレスバー非表示エラー: ' + e.message);
@@ -462,39 +451,19 @@ function getProgressState() {
 }
 
 /**
- * サイドバーのプログレスバーを更新するグローバル関数
+ * サイドバーのプログレスバーを更新するグローバル関数（非推奨）
+ * 直接のアプリケーション側での使用は避け、getProgressStateを使用したサイドバー側のポーリングを推奨
  */
 function updateSidebarProgressBar(percent) {
-  try {
-    const script = `
-      if (typeof updateProgress === 'function') {
-        updateProgress(${percent});
-      }
-    `;
-    const output = HtmlService.createHtmlOutput(`<script>${script}</script>`);
-    SpreadsheetApp.getUi().showModelessDialog(output, "進捗を更新中...");
-    return true;
-  } catch (e) {
-    Logger.log('サイドバープログレス更新エラー: ' + e.message);
-    return false;
-  }
+  // 空の実装 - サイドバーがポーリングで状態を取得するため
+  return true;
 }
 
 /**
- * サイドバーのプログレスバーを非表示にするグローバル関数
+ * サイドバーのプログレスバーを非表示にするグローバル関数（非推奨）
+ * 直接のアプリケーション側での使用は避け、getProgressStateを使用したサイドバー側のポーリングを推奨
  */
 function hideSidebarProgressBar() {
-  try {
-    const script = `
-      if (typeof hideProgress === 'function') {
-        hideProgress();
-      }
-    `;
-    const output = HtmlService.createHtmlOutput(`<script>${script}</script>`);
-    SpreadsheetApp.getUi().showModelessDialog(output, "プログレスを閉じています...");
-    return true;
-  } catch (e) {
-    Logger.log('サイドバープログレス非表示エラー: ' + e.message);
-    return false;
-  }
+  // 空の実装 - サイドバーがポーリングで状態を取得するため
+  return true;
 } 

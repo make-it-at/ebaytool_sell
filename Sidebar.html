@@ -887,7 +887,7 @@
         // 既存のタイマーがあれば停止
         stopProgressUpdateTimer();
         
-        // 新しいタイマーを開始（2秒ごとに更新）
+        // 新しいタイマーを開始（500ミリ秒ごとに更新 - より頻繁に更新）
         progressUpdateTimerId = setInterval(function() {
           // サーバーから最新のプログレス状態を取得
           google.script.run
@@ -905,7 +905,7 @@
               }
             })
             .getProgressState();
-        }, 2000);
+        }, 500);
       }
       
       // プログレス更新タイマーを停止
