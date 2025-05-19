@@ -3,7 +3,7 @@
  * 
  * ユーザーインターフェース関連の処理を提供します。
  * 
- * バージョン: v1.3.5
+ * バージョン: v1.3.6
  * 最終更新日: 2025-05-29
  */
 
@@ -12,9 +12,6 @@ const UI = {};
 
 // 直近の成功メッセージを保存するグローバル変数
 let LAST_RESULT_MESSAGE = null;
-
-// 直近のプログレス状態を保存するグローバル変数
-let LAST_PROGRESS_STATE = null;
 
 /**
  * サイドバーを表示する
@@ -258,6 +255,26 @@ UI.showErrorMessage = function(message) {
 };
 
 /**
+ * プログレス状態をPropertiesServiceに保存する
+ */
+function saveProgressState(state) {
+  PropertiesService.getScriptProperties().setProperty('PROGRESS_STATE', JSON.stringify(state));
+}
+
+/**
+ * プログレス状態をPropertiesServiceから取得する
+ */
+function loadProgressState() {
+  const str = PropertiesService.getScriptProperties().getProperty('PROGRESS_STATE');
+  if (!str) return null;
+  try {
+    return JSON.parse(str);
+  } catch (e) {
+    return null;
+  }
+}
+
+/**
  * プログレスバーを表示する
  * @param {string} message 表示するメッセージ
  */
@@ -267,31 +284,19 @@ UI.showProgressBar = function(message) {
     try {
       SpreadsheetApp.getUi();
     } catch (e) {
-      // UIが利用できない場合はログのみに記録
       console.log('処理中: ' + message);
       return;
     }
-    
-    // 現在のプログレスバー状態を保存
-    LAST_PROGRESS_STATE = {
+    // PropertiesServiceに保存
+    const state = {
       message: message,
       percent: 0,
       isVisible: true
     };
-    
-    // ログに記録
+    saveProgressState(state);
     Logger.log(`プログレスバー表示: ${message}`);
-    
-    // サイドバー特定のHTMLを評価
-    try {
-      // サイドバーに状態を保存（モーダレスダイアログではなく、後で自動的に取得される）
-      // サイドバーが自動検出するので、ダイアログは表示しない
-      return true;
-    } catch (e) {
-      Logger.log('プログレスバー表示エラー: ' + e.message);
-    }
+    return true;
   } catch (finalError) {
-    // すべてのエラーを無視
     Logger.log('プログレスバー表示で致命的エラー: ' + finalError.message);
   }
 };
@@ -302,28 +307,20 @@ UI.showProgressBar = function(message) {
  */
 UI.updateProgressBar = function(percent) {
   try {
-    // UIが利用可能かチェック
     try {
       SpreadsheetApp.getUi();
     } catch (e) {
-      // UIが利用できない場合は何もしない
       return;
     }
-    
-    // 現在のプログレスバー状態を更新
-    if (LAST_PROGRESS_STATE) {
-      LAST_PROGRESS_STATE.percent = percent;
-    }
-    
-    // ログに進捗を記録（10%単位）
+    // PropertiesServiceから取得して更新
+    let state = loadProgressState() || { message: '', percent: 0, isVisible: true };
+    state.percent = percent;
+    saveProgressState(state);
     if (percent % 10 === 0) {
       Logger.log(`プログレス更新: ${percent}%`);
     }
-    
-    // サイドバーが自動検出するので、直接の更新は行わない
     return true;
   } catch (e) {
-    // エラーが発生した場合は無視
     Logger.log('プログレスバー更新エラー: ' + e.message);
   }
 };
@@ -333,26 +330,18 @@ UI.updateProgressBar = function(percent) {
  */
 UI.hideProgressBar = function() {
   try {
-    // UIが利用可能かチェック
     try {
       SpreadsheetApp.getUi();
     } catch (e) {
-      // UIが利用できない場合は何もしない
       return;
     }
-    
-    // プログレスバー状態をリセット
-    if (LAST_PROGRESS_STATE) {
-      LAST_PROGRESS_STATE.isVisible = false;
-    }
-    
-    // ログに記録
+    // PropertiesServiceから取得して非表示に
+    let state = loadProgressState() || { message: '', percent: 100, isVisible: true };
+    state.isVisible = false;
+    saveProgressState(state);
     Logger.log('プログレスバー非表示');
-    
-    // サイドバーが自動検出するので、直接の更新は行わない
     return true;
   } catch (e) {
-    // エラーが発生した場合は無視
     Logger.log('プログレスバー非表示エラー: ' + e.message);
   }
 };
@@ -447,23 +436,5 @@ function getLastResultMessage() {
  * サイドバーからのプログレスバー状態取得用グローバル関数
  */
 function getProgressState() {
-  return LAST_PROGRESS_STATE;
-}
-
-/**
- * サイドバーのプログレスバーを更新するグローバル関数（非推奨）
- * 直接のアプリケーション側での使用は避け、getProgressStateを使用したサイドバー側のポーリングを推奨
- */
-function updateSidebarProgressBar(percent) {
-  // 空の実装 - サイドバーがポーリングで状態を取得するため
-  return true;
-}
-
-/**
- * サイドバーのプログレスバーを非表示にするグローバル関数（非推奨）
- * 直接のアプリケーション側での使用は避け、getProgressStateを使用したサイドバー側のポーリングを推奨
- */
-function hideSidebarProgressBar() {
-  // 空の実装 - サイドバーがポーリングで状態を取得するため
-  return true;
+  return loadProgressState();
 } 
