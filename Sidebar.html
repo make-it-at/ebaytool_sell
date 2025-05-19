@@ -33,7 +33,7 @@
         font-family: 'Roboto', sans-serif;
         color: var(--text-color);
         background-color: var(--background-color);
-        line-height: 1.6;
+        line-height: 1.5;
         font-size: 14px;
       }
       
@@ -43,7 +43,7 @@
         flex-direction: column;
         height: 100%;
         overflow-y: auto;
-        padding: 10px;
+        padding: 6px 6px 0 6px;
       }
       
       /* ヘッダー部分 */
@@ -51,52 +51,52 @@
         display: flex;
         flex-direction: column;
         align-items: center;
-        padding: 15px 0;
-        margin-bottom: 20px;
+        padding: 8px 0 8px 0;
+        margin-bottom: 8px;
         border-bottom: 1px solid var(--divider-color);
       }
       
       .sidebar-header .logo {
-        width: 48px;
-        height: 48px;
-        margin-bottom: 10px;
+        width: 36px;
+        height: 36px;
+        margin-bottom: 4px;
       }
       
       .sidebar-header h1 {
-        font-size: 20px;
+        font-size: 16px;
         font-weight: 500;
         color: var(--primary-color);
-        margin-bottom: 5px;
+        margin-bottom: 2px;
       }
       
       .sidebar-header p {
-        font-size: 12px;
+        font-size: 11px;
         color: var(--text-secondary);
       }
       
       /* セクション */
       .section {
-        margin-bottom: 20px;
-        padding: 15px;
-        border-radius: 8px;
-        background-color: rgba(0, 0, 0, 0.02);
+        margin-bottom: 8px;
+        padding: 8px;
+        border-radius: 6px;
+        background-color: rgba(0, 0, 0, 0.01);
       }
       
       .section h2 {
-        font-size: 16px;
+        font-size: 14px;
         font-weight: 500;
-        margin-bottom: 15px;
+        margin-bottom: 8px;
         color: var(--primary-dark);
         border-left: 3px solid var(--primary-color);
-        padding-left: 10px;
+        padding-left: 7px;
       }
       
       /* ボタングループ */
       .button-group {
         display: flex;
         flex-wrap: wrap;
-        gap: 10px;
-        margin-bottom: 10px;
+        gap: 6px;
+        margin-bottom: 6px;
       }
       
       .button-group.vertical {
@@ -108,28 +108,28 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        padding: 8px 16px;
-        font-size: 14px;
+        padding: 6px 10px;
+        font-size: 13px;
         font-weight: 500;
         border: none;
         border-radius: 4px;
         cursor: pointer;
         transition: all 0.3s ease;
         text-transform: none;
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.07);
       }
       
       .btn i {
-        margin-right: 8px;
+        margin-right: 6px;
       }
       
       .btn:hover {
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-        opacity: 0.9;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+        opacity: 0.95;
       }
       
       .btn:active {
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+        box-shadow: 0 1px 2px rgba(0,0,0,0.15);
         transform: translateY(1px);
       }
       
@@ -170,43 +170,43 @@
       /* 全幅ボタン */
       .full-width {
         width: 100%;
-        margin-top: 10px;
+        margin-top: 6px;
       }
       
       /* プログレスバー */
       .progress-container {
-        margin: 20px 0;
-        padding: 15px;
-        border-radius: 8px;
-        background-color: rgba(0, 0, 0, 0.02);
+        margin: 0 0 8px 0;
+        padding: 8px;
+        border-radius: 6px;
+        background-color: rgba(0,0,0,0.01);
       }
       
       .progress-container h3 {
-        font-size: 14px;
+        font-size: 13px;
         font-weight: 500;
-        margin-bottom: 10px;
+        margin-bottom: 4px;
         color: var(--text-color);
       }
       
       .progress {
         width: 100%;
-        height: 10px;
+        height: 8px;
         background-color: #e0e0e0;
-        border-radius: 5px;
+        border-radius: 4px;
         overflow: hidden;
-        margin-bottom: 5px;
+        margin-bottom: 2px;
       }
       
       .progress-bar {
         height: 100%;
         background-color: var(--primary-color);
-        border-radius: 5px;
+        border-radius: 4px;
         transition: width 0.3s ease;
       }
       
       #progress-percent {
         text-align: right;
-        font-size: 12px;
+        font-size: 11px;
         color: var(--text-secondary);
       }
       
@@ -292,35 +292,35 @@
       
       /* 結果メッセージ表示エリア */
       .result-message-container {
-        margin: 10px 0;
-        padding: 15px;
-        border-radius: 8px;
-        background-color: rgba(0, 0, 0, 0.02);
-        display: block; /* デフォルトで表示 */
+        margin: 0 0 8px 0;
+        padding: 8px;
+        border-radius: 6px;
+        background-color: rgba(0,0,0,0.01);
+        display: block;
       }
       
       .result-message {
-        font-size: 14px;
-        margin-bottom: 10px;
-        padding: 15px;
+        font-size: 13px;
+        margin-bottom: 6px;
+        padding: 10px;
         border-radius: 4px;
         border-left: 4px solid var(--primary-color);
-        background-color: rgba(0, 0, 0, 0.03);
+        background-color: rgba(0,0,0,0.03);
       }
       
       .result-message.success {
-        background-color: rgba(76, 175, 80, 0.15);
+        background-color: rgba(76,175,80,0.13);
         border-left-color: var(--success-color);
         border-left-width: 5px;
       }
       
       .result-message.error {
-        background-color: rgba(244, 67, 54, 0.1);
+        background-color: rgba(244,67,54,0.09);
         border-left-color: var(--error-color);
       }
       
       .result-message.info {
-        background-color: rgba(33, 150, 243, 0.1);
+        background-color: rgba(33,150,243,0.09);
         border-left-color: var(--info-color);
       }
       
@@ -337,27 +337,27 @@
       /* フォーム入力 */
       .input-group {
         display: flex;
-        margin-bottom: 10px;
+        margin-bottom: 6px;
       }
       
       .input-group input[type="text"] {
         flex: 1;
-        padding: 8px 10px;
+        padding: 6px 8px;
         border: 1px solid var(--divider-color);
         border-radius: 4px;
-        font-size: 14px;
+        font-size: 13px;
       }
       
       .input-group button {
-        margin-left: 5px;
+        margin-left: 4px;
       }
       
       /* フッター */
       .sidebar-footer {
         margin-top: auto;
-        padding: 15px 0;
+        padding: 8px 0;
         text-align: center;
-        font-size: 12px;
+        font-size: 11px;
         color: var(--text-secondary);
         border-top: 1px solid var(--divider-color);
       }
@@ -371,24 +371,24 @@
       
       /* 結果メッセージの中身のスタイル */
       .result-message h3 {
-        font-size: 15px;
+        font-size: 14px;
         font-weight: 500;
-        margin-bottom: 8px;
+        margin-bottom: 5px;
         color: var(--primary-dark);
       }
       
       .result-message p {
-        font-size: 13px;
-        margin-bottom: 5px;
+        font-size: 12px;
+        margin-bottom: 3px;
         color: var(--text-color);
       }
       
       .result-message .additional-info {
-        margin-top: 8px;
-        padding-top: 8px;
+        margin-top: 5px;
+        padding-top: 5px;
         border-top: 1px dashed var(--divider-color);
         font-style: italic;
-        font-size: 12px;
+        font-size: 11px;
         color: var(--text-secondary);
       }
 
@@ -427,6 +427,26 @@
   </head>
   <body>
     <div class="sidebar">
+      <!-- プログレスバーと処理結果を最上部に移動 -->
+      <div id="progress-container" class="progress-container" style="display: block;">
+        <h3 id="progress-message">処理中...</h3>
+        <div class="progress">
+          <div id="progress-bar" class="progress-bar" style="width: 0%"></div>
+        </div>
+        <p id="progress-percent">-</p>
+      </div>
+      <div id="result-message-container" class="result-message-container section" style="display: block;">
+        <h2 style="margin-bottom:4px;"><i class="fas fa-check-circle"></i> 処理結果</h2>
+        <div id="result-message-content">
+          <div class="result-message success">
+            <h3>準備完了</h3>
+            <p>処理を実行すると、ここに結果が表示されます。</p>
+          </div>
+        </div>
+        <button id="clear-result-btn" class="btn btn-outline full-width" style="margin-top: 6px; height: 32px; font-size:12px;">
+          <i class="fas fa-times"></i> 閉じる
+        </button>
+      </div>
       <header class="sidebar-header">
         <img src="https://www.gstatic.com/images/branding/product/1x/apps_script_48dp.png" alt="Logo" class="logo">
         <p>バージョン <?= version ?></p>
@@ -434,11 +454,11 @@
       
       <section class="section">
         <h2>使い方ガイド</h2>
-        <button class="btn btn-outline full-width" id="toggle-workflow" style="height: 44px; padding: 8px 12px; white-space: nowrap; margin-bottom: 10px;">
+        <button class="btn btn-outline full-width" id="toggle-workflow" style="height: 32px; padding: 6px 8px; white-space: nowrap; margin-bottom: 6px;">
           <i class="fas fa-book"></i> ワークフローを表示
         </button>
         
-        <div id="workflow-guide" style="display: none; margin-top: 10px; padding: 10px; background: #f5f5f5; border-radius: 4px; font-size: 13px;">
+        <div id="workflow-guide" style="display: none; margin-top: 6px; padding: 6px; background: #f5f5f5; border-radius: 4px; font-size: 12px;">
           <h3 style="font-size: 14px; margin-bottom: 8px; color: var(--primary-dark);">基本的なワークフロー</h3>
           <ol style="padding-left: 20px; margin-bottom: 10px;">
             <li style="margin-bottom: 6px;">「CSVファイルを選択」ボタンでデータをインポート</li>
@@ -523,27 +543,6 @@
           <i class="fas fa-cog"></i> NGワード設定を開く
         </button>
       </section>
-      
-      <div id="progress-container" class="progress-container" style="display: block;">
-        <h3 id="progress-message">処理中...</h3>
-        <div class="progress">
-          <div id="progress-bar" class="progress-bar" style="width: 0%"></div>
-        </div>
-        <p id="progress-percent">-</p>
-      </div>
-      
-      <div id="result-message-container" class="section" style="display: block;">
-        <h2><i class="fas fa-check-circle"></i> 処理結果</h2>
-        <div id="result-message-content">
-          <div class="result-message success">
-            <h3>準備完了</h3>
-            <p>処理を実行すると、ここに結果が表示されます。</p>
-          </div>
-        </div>
-        <button id="clear-result-btn" class="btn btn-outline full-width" style="margin-top: 10px; height: 40px;">
-          <i class="fas fa-times"></i> 閉じる
-        </button>
-      </div>
       
       <div id="notification" class="notification"></div>
       
