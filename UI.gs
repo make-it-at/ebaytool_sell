@@ -3,8 +3,8 @@
  * 
  * ユーザーインターフェース関連の処理を提供します。
  * 
- * バージョン: v1.3.2
- * 最終更新日: 2025-05-26
+ * バージョン: v1.3.3
+ * 最終更新日: 2025-05-27
  */
 
 // UI名前空間
@@ -357,11 +357,19 @@ UI.showResultMessage = function(title, stats, additionalInfo) {
     const removedCount = stats.removedCount || 0;
     const modifiedCount = stats.modifiedCount || 0;
     const totalProcessed = stats.totalProcessed || 0;
+    const beforeCount = stats.beforeCount || 0;
+    const afterCount = stats.afterCount || 0;
     
     // フォーマットされた結果メッセージを作成
     let resultMessage = `<div class="result-message">`;
     resultMessage += `<h3>${title}</h3>`;
-    resultMessage += `<p>処理件数: ${totalProcessed}件</p>`;
+    
+    // 処理前後のデータ数が提供されている場合は表示
+    if (beforeCount > 0 || afterCount > 0) {
+      resultMessage += `<p>データ数: ${beforeCount}件 → ${afterCount}件</p>`;
+    } else {
+      resultMessage += `<p>処理件数: ${totalProcessed}件</p>`;
+    }
     
     if (removedCount > 0) {
       resultMessage += `<p>削除件数: ${removedCount}件</p>`;

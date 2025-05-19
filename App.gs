@@ -3,12 +3,12 @@
  * 
  * メインアプリケーションの初期化、UI表示、イベントハンドリングを担当します。
  * 
- * バージョン: v1.4.8
- * 最終更新日: 2025-05-26
+ * バージョン: v1.4.9
+ * 最終更新日: 2025-05-27
  */
 
 // アプリケーションのバージョン情報
-const APP_VERSION = 'v1.4.8';
+const APP_VERSION = 'v1.4.9';
 
 /**
  * eBayツール出品ファイル加工ツール
@@ -90,6 +90,18 @@ function runAllProcesses() {
   Logger.startProcess('全処理一括実行');
   
   try {
+    // 処理前のデータ行数を取得
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const listingSheet = ss.getSheetByName(Config.SHEET_NAMES.LISTING);
+    
+    // 出品データシートが存在するか確認
+    if (!listingSheet) {
+      throw new Error('出品データシートが見つかりません。初期設定を実行するか、データをインポートしてください。');
+    }
+    
+    // 処理前のデータ行数を取得（ヘッダー行を除く）
+    const beforeDataCount = listingSheet.getLastRow() - 1;
+    
     // 各フィルター処理を順次実行する前に開始時間を保存
     const savedStartTime = Logger.processStartTime;
     
@@ -138,21 +150,34 @@ function runAllProcesses() {
     // 開始時間を元に戻す
     Logger.processStartTime = savedStartTime;
     
+    // 処理後のデータ行数を取得（ヘッダー行を除く）
+    const afterDataCount = listingSheet.getLastRow() - 1;
+    
     // 処理結果の詳細メッセージを作成
     const totalRemoved = results.ngWordFilter.removed + results.duplicateCheck.removed + 
                          results.lengthFilter.removed + results.priceFilter.removed;
     const totalModified = results.ngWordFilter.modified + results.locationFix.modified;
     
-    const resultSummary = 
-      `処理完了（削除: ${totalRemoved}件, 修正: ${totalModified}件）\n\n` +
+    // 詳細な追加情報を作成
+    const additionalInfo = 
       `■ NGワード処理: ${results.ngWordFilter.removed}件削除, ${results.ngWordFilter.modified}件修正\n` +
       `■ 重複チェック: ${results.duplicateCheck.removed}件削除\n` +
       `■ 文字数制限(${results.lengthFilter.limit}文字以下): ${results.lengthFilter.removed}件削除\n` +
       `■ 所在地情報: ${results.locationFix.modified}件修正\n` +
       `■ 価格フィルター($${results.priceFilter.threshold}以下): ${results.priceFilter.removed}件削除`;
     
-    // 完了メッセージを表示
-    UI.showDetailedSuccessMessage('すべての処理が完了しました', resultSummary);
+    // 完了メッセージをUI.showResultMessageで表示
+    UI.showResultMessage(
+      'すべての処理が完了しました',
+      {
+        removedCount: totalRemoved,
+        modifiedCount: totalModified,
+        totalProcessed: beforeDataCount,
+        beforeCount: beforeDataCount,
+        afterCount: afterDataCount
+      },
+      additionalInfo
+    );
     
     // ログ記録終了
     Logger.endProcess('全処理一括実行 成功');
