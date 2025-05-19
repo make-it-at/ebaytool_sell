@@ -399,7 +399,16 @@ function importCsvFromBase64(base64Data) {
     const blob = Utilities.newBlob(csvData, 'text/csv', 'import.csv');
     
     // ImportExportモジュールの関数を呼び出し
-    return ImportExport.importCsv(blob);
+    const result = ImportExport.importCsv(blob);
+    if (result) {
+      // サイドバーに処理結果を表示
+      UI.showResultMessage(
+        'CSVインポート完了',
+        { removedCount: 0, modifiedCount: 0, totalProcessed: 0 },
+        'CSVファイルのインポートが正常に完了しました。データが「出品データ」シートに反映されています。'
+      );
+    }
+    return result;
   } catch (error) {
     Logger.logError('CSVインポート(Base64)でエラーが発生: ' + error.message);
     return false;
