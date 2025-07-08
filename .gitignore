@@ -1,0 +1,39 @@
+# GAS設定ファイル
+.clasp.json
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# 環境設定
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# ログファイル
+*.log
+
+# macOS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Cursor
+.cursorindexingignore
+.specstory/
+
+# CSVファイル（サンプル以外）
+*.csv
+!sample.csv
+
+# 一時ファイル
+*.tmp
+*.temp 

@@ -3,8 +3,9 @@
  * 
  * 各種フィルタリング機能を提供します。
  * 
- * バージョン: v1.3.7
- * 最終更新日: 2025-05-26
+ * バージョン: v1.5.3
+ * 最終更新日: 2025-06-15
+ * 更新内容: NGワードフィルター処理の高速化（バッチ処理の実装）
  */
 
 // Filters名前空間
@@ -62,13 +63,16 @@ Filters.runNgWordFilter = function() {
       throw new Error('出品データシートが見つかりません。初期設定を実行するか、データをインポートしてください。');
     }
     
-    // データ範囲を取得
-    const dataRange = listingSheet.getDataRange();
-    const values = dataRange.getValues();
+    // データの基本情報を取得
+    const lastRow = listingSheet.getLastRow();
+    const lastColumn = listingSheet.getLastColumn();
     
-    // ヘッダー行をスキップ
-    const headerRow = values[0];
-    const dataRows = values.slice(1);
+    if (lastRow <= 1) {
+      throw new Error('出品データが見つかりません。データをインポートしてください。');
+    }
+    
+    // ヘッダー行のみ取得
+    const headerRow = listingSheet.getRange(1, 1, 1, lastColumn).getValues()[0];
     
     // Title列のインデックスを取得
     const titleColumnIndex = headerRow.indexOf('Title');
@@ -93,22 +97,43 @@ Filters.runNgWordFilter = function() {
     
     // 設定内容をログに出力（デバッグ用）
     Logger.log(`NGワード設定: リスト削除=${deleteListNgWords.length}件, 部分削除=${deletePartNgWords.length}件`);
-    if (deleteListNgWords.length > 0) {
-      deleteListNgWords.forEach(word => Logger.log(`リスト削除NGワード: "${word}"`));
-    }
-    if (deletePartNgWords.length > 0) {
-      deletePartNgWords.forEach(word => Logger.log(`部分削除NGワード: "${word}"`));
-    }
     
-    // 新しい結果データの準備
-    let resultData = [];
-    let rowsToDelete = [];
+    // 処理前のデータ行数（ヘッダーを除く）
+    const beforeDataCount = lastRow - 1;
     
-    // NGワードフィルタリング処理
-    dataRows.forEach((row, index) => {
-      // 処理の進捗状況を更新（10%単位）
-      if (index % Math.floor(Math.max(dataRows.length, 10) / 10) === 0) {
-        UI.updateProgressBar(Math.floor((index / Math.max(dataRows.length, 1)) * 100));
+    // バッチ処理のためのパラメータ
+    const batchSize = 500; // 一度に処理する行数
+    let rowsToDelete = []; // 削除対象の行
+    let rowsToUpdate = []; // 更新対象の行と内容
+    
+    // データをバッチで処理
+    const dataRows = lastRow - 1; // ヘッダーを除いた行数
+    
+    // NGワード削除用の正規表現パターンをキャッシュ
+    const partNgWordRegexCache = deletePartNgWords.map(ngWord => {
+      const escapeRegExp = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      return {
+        pattern: new RegExp(escapeRegExp(ngWord).replace(/\s+/g, '\\s+'), 'gi'),
+        original: ngWord
+      };
+    });
+    
+    for (let batchStart = 0; batchStart < dataRows; batchStart += batchSize) {
+      // 現在のバッチサイズを計算
+      const currentBatchSize = Math.min(batchSize, dataRows - batchStart);
+      
+      // バッチデータを取得（2行目からのデータを取得するため、行番号は+2）
+      const batchData = listingSheet.getRange(batchStart + 2, 1, currentBatchSize, lastColumn).getValues();
+    
+      // バッチデータを処理
+      for (let i = 0; i < batchData.length; i++) {
+        const row = batchData[i];
+        const rowIndex = batchStart + i + 2; // 実際のシートの行番号
+        
+        // 進捗状況を更新
+        if (i % Math.floor(Math.max(currentBatchSize, 10) / 10) === 0) {
+          const overallProgress = ((batchStart + i) / dataRows) * 100;
+          UI.updateProgressBar(Math.floor(overallProgress));
       }
       
       const title = row[titleColumnIndex]; // Title列の値
@@ -120,139 +145,137 @@ Filters.runNgWordFilter = function() {
       let containsListNgWord = false;
       let matchedListNgWords = [];
       
-      for (let i = 0; i < normalizedListNgWords.length; i++) {
-        const ngWord = normalizedListNgWords[i];
+        for (let j = 0; j < normalizedListNgWords.length; j++) {
+          const ngWord = normalizedListNgWords[j];
         if (ngWord && normalizedTitle.includes(ngWord)) {
           containsListNgWord = true;
-          matchedListNgWords.push(deleteListNgWords[i]); // 元の形式で記録
+            matchedListNgWords.push(deleteListNgWords[j]); // 元の形式で記録
           break; // 1つでも見つかれば削除対象
         }
       }
       
       // リスト削除NGワードを含む場合は削除対象に追加
       if (containsListNgWord) {
-        rowsToDelete.push(index + 2); // +2 は1-indexedと、ヘッダー行をスキップするため
+          rowsToDelete.push(rowIndex); // 実際のシート行番号
         Logger.log(`リスト削除NGワード含有のためスキップ: "${title}", 一致NGワード: ${matchedListNgWords.join(', ')}`);
       } else {
         // それ以外の場合は部分削除NGワードのチェック
         let processedTitle = title;
         let matchedPartNgWords = [];
-        
-        for (let i = 0; i < normalizedPartNgWords.length; i++) {
-          const ngWord = normalizedPartNgWords[i];
-          const originalNgWord = deletePartNgWords[i];
+          let titleModified = false;
           
-          if (ngWord && this.normalizeSearchTerm(processedTitle).includes(ngWord)) {
-            matchedPartNgWords.push(originalNgWord);
-            
-            // NGワードを置換する際、大文字・小文字を保持しつつ置換するため正規表現を使用
-            // 空白の違いも吸収して置換
-            const escapeRegExp = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            const regexPattern = new RegExp(escapeRegExp(originalNgWord).replace(/\s+/g, '\\s+'), 'gi');
-            processedTitle = processedTitle.replace(regexPattern, '');
+          // 高速化のためにキャッシュした正規表現を使用
+          for (let j = 0; j < partNgWordRegexCache.length; j++) {
+            const { pattern, original } = partNgWordRegexCache[j];
+          
+            if (this.normalizeSearchTerm(processedTitle).includes(normalizedPartNgWords[j])) {
+              matchedPartNgWords.push(original);
+              const oldTitle = processedTitle;
+              processedTitle = processedTitle.replace(pattern, '');
+              
+              if (oldTitle !== processedTitle) {
+                titleModified = true;
+              }
+            }
           }
-        }
-        
-        // 結果データに追加
-        const newRow = [...row];
         
         // 部分削除NGワードを処理した場合、タイトルを置き換え
-        if (matchedPartNgWords.length > 0) {
+          if (titleModified) {
+            const newRow = [...row];
           newRow[titleColumnIndex] = processedTitle;
+            rowsToUpdate.push({ row: rowIndex, data: newRow });
           Logger.log(`部分削除NGワード処理: "${title}" → "${processedTitle}", 一致NGワード: ${matchedPartNgWords.join(', ')}`);
+          }
+        }
         }
         
-        resultData.push([index + 2, newRow]); // 行番号と新しい行データを保存
+      // バッチ処理の間にメモリを解放
+      if (batchStart + batchSize < dataRows) {
+        Utilities.sleep(50);
       }
-    });
+    }
     
     // 処理結果を反映
-    // まず、削除対象の行を削除（後ろから処理して行ずれを防止）
+    // 削除対象の行を削除（後ろから処理して行ずれを防止）
     if (rowsToDelete.length > 0) {
       rowsToDelete.sort((a, b) => b - a); // 降順にソート
-      for (const rowIndex of rowsToDelete) {
+      
+      // バッチでの削除処理（パフォーマンス向上のため）
+      const deleteBatchSize = 50; // 削除のバッチサイズ
+      for (let i = 0; i < rowsToDelete.length; i += deleteBatchSize) {
+        const batch = rowsToDelete.slice(i, i + deleteBatchSize);
+        for (const rowIndex of batch) {
         listingSheet.deleteRow(rowIndex);
       }
       
-      // 削除後に結果データの行番号を再計算（削除した行より下の行は上にシフトする）
-      resultData = resultData.map(([rowIndex, row]) => {
-        let newRowIndex = rowIndex;
+        // 削除処理の間にわずかな遅延を挿入
+        if (i + deleteBatchSize < rowsToDelete.length) {
+          Utilities.sleep(50);
+        }
+        
+        // 削除進捗の更新
+        UI.updateProgressBar(Math.floor(80 + (i / rowsToDelete.length) * 10));
+      }
+      
+      // 削除した行に基づいて更新対象の行番号を調整
+      if (rowsToUpdate.length > 0) {
+        rowsToUpdate = rowsToUpdate.map(item => {
+          let newRowIndex = item.row;
         for (const deletedRow of rowsToDelete) {
-          if (deletedRow < rowIndex) {
+            if (deletedRow < newRowIndex) {
             newRowIndex--;
           }
         }
-        return [newRowIndex, row];
+          return { row: newRowIndex, data: item.data };
       });
-    }
-    
-    // 更新データを反映（行ごとに更新）
-    resultData.forEach(([rowIndex, row]) => {
-      // 行が存在する場合のみ更新
-      if (rowIndex >= 2 && rowIndex <= listingSheet.getLastRow()) {
-        listingSheet.getRange(rowIndex, 1, 1, row.length).setValues([row]);
       }
-    });
-    
-    // 部分削除処理の件数を計算（エラー修正）
-    let partialDeleteCount = 0;
-    try {
-      partialDeleteCount = resultData.filter(([rowIndex, row]) => {
-        // 対応する元データの行を探す
-        const originalRowIndex = rowIndex - 2; // 行番号から元データのインデックスに変換
-        if (originalRowIndex >= 0 && originalRowIndex < dataRows.length) {
-          const originalRow = dataRows[originalRowIndex];
-          // タイトルが変更されているかどうかをチェック
-          return row[titleColumnIndex] !== originalRow[titleColumnIndex];
-        }
-        return false;
-      }).length;
-    } catch (error) {
-      Logger.logError('部分削除件数集計中にエラー: ' + error.message);
-      partialDeleteCount = 0; // エラーの場合は0件とする
     }
     
-    // 結果メッセージ
-    const message = `NGワードフィルタリングが完了しました。リスト削除: ${rowsToDelete.length}件、部分削除処理: ${partialDeleteCount}件`;
-    UI.showSuccessMessage(message);
-    Logger.endProcess('NGワードフィルタリング完了');
+    // 更新データを反映（バッチで更新）
+    if (rowsToUpdate.length > 0) {
+      const updateBatchSize = 50; // 更新のバッチサイズ
+      
+      for (let i = 0; i < rowsToUpdate.length; i += updateBatchSize) {
+        const batch = rowsToUpdate.slice(i, i + updateBatchSize);
+        
+        for (const item of batch) {
+      // 行が存在する場合のみ更新
+          if (item.row >= 2 && item.row <= listingSheet.getLastRow()) {
+            listingSheet.getRange(item.row, 1, 1, item.data.length).setValues([item.data]);
+      }
+        }
+        
+        // 更新処理の間にわずかな遅延を挿入
+        if (i + updateBatchSize < rowsToUpdate.length) {
+          Utilities.sleep(50);
+        }
+        
+        // 更新進捗の更新
+        UI.updateProgressBar(Math.floor(90 + (i / rowsToUpdate.length) * 10));
+      }
+    }
     
     // 処理後のデータ行数を取得
-    const afterDataCount = listingSheet.getLastRow() - 1; // ヘッダー行を除く
+    const afterDataCount = listingSheet.getLastRow() - 1;
     
-    // 詳細な処理結果を表示
-    UI.showResultMessage(
-      'NGワードフィルタリング完了',
-      {
-        removedCount: rowsToDelete.length,
-        modifiedCount: partialDeleteCount,
-        totalProcessed: dataRows.length
-      },
-      `リスト削除対象NGワード: ${deleteListNgWords.length}件\n部分削除対象NGワード: ${deletePartNgWords.length}件`
-    );
+    // 処理結果メッセージを作成
+    const resultMessage = `NGワードフィルタリングが完了しました。データ数: ${beforeDataCount}件 → ${afterDataCount}件（削除: ${rowsToDelete.length}件, 修正: ${rowsToUpdate.length}件）`;
+    UI.showSuccessMessage(resultMessage);
     
-    // 処理結果を返す
-    return {
-      success: true,
-      message: message,
-      stats: {
+    // 統計情報を返す
+    const stats = {
+      beforeCount: beforeDataCount,
+      afterCount: afterDataCount,
         removedCount: rowsToDelete.length,
-        modifiedCount: partialDeleteCount,
-        totalProcessed: dataRows.length
-      }
+      modifiedCount: rowsToUpdate.length
     };
+    
+    Logger.endProcess('NGワードフィルタリング完了');
+    return { success: true, message: resultMessage, stats: stats };
   } catch (error) {
     Logger.logError('NGワードフィルタリング中にエラー: ' + error.message);
     UI.showErrorMessage('NGワードフィルタリング中にエラーが発生しました: ' + error.message);
-    return {
-      success: false,
-      message: 'NGワードフィルタリング中にエラーが発生しました: ' + error.message,
-      stats: {
-        removedCount: 0,
-        modifiedCount: 0,
-        totalProcessed: 0
-      }
-    };
+    return { success: false, message: error.message };
   } finally {
     UI.hideProgressBar();
   }

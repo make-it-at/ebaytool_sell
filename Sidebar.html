@@ -188,26 +188,45 @@
         color: var(--text-color);
       }
       
-      .progress {
-        width: 100%;
-        height: 8px;
-        background-color: #e0e0e0;
-        border-radius: 4px;
-        overflow: hidden;
-        margin-bottom: 2px;
+      /* スピナーのスタイル */
+      .spinner-container {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 10px 0;
       }
       
-      .progress-bar {
-        height: 100%;
-        background-color: var(--primary-color);
-        border-radius: 4px;
-        transition: width 0.3s ease;
+      .spinner {
+        width: 32px;
+        height: 32px;
+        border: 3px solid rgba(76, 175, 80, 0.2);
+        border-top: 3px solid var(--primary-color);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
       }
       
-      #progress-percent {
-        text-align: right;
-        font-size: 11px;
+      /* 完了アイコンのスタイル */
+      .complete-icon {
+        display: none;
+        width: 32px;
+        height: 32px;
+        color: var(--success-color);
+        font-size: 32px;
+        text-align: center;
+      }
+      
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+      
+      /* 処理ステータステキスト */
+      .process-status {
+        text-align: center;
+        font-size: 12px;
         color: var(--text-secondary);
+        margin-top: 8px;
+        display: none; /* パーセンテージ表示を非表示にする */
       }
       
       /* テーブルスタイル */
@@ -427,13 +446,17 @@
   </head>
   <body>
     <div class="sidebar">
-      <!-- プログレスバーと処理結果を最上部に移動 -->
-      <div id="progress-container" class="progress-container" style="display: block;">
+      <header class="sidebar-header">
+        <img src="https://www.gstatic.com/images/branding/product/1x/apps_script_48dp.png" alt="Logo" class="logo">
+        <p>バージョン <?= version ?></p>
+      </header>
+      <!-- プログレスバーと処理結果をその下に移動 -->
+      <div id="progress-container" class="progress-container" style="display: none;">
         <h3 id="progress-message">処理中...</h3>
-        <div class="progress">
-          <div id="progress-bar" class="progress-bar" style="width: 0%"></div>
+        <div class="spinner-container">
+          <div class="spinner" style="display: block;"></div>
         </div>
-        <p id="progress-percent">-</p>
+        <p id="process-status" style="display: none;">処理中...</p>
       </div>
       <div id="result-message-container" class="result-message-container section" style="display: block;">
         <h2 style="margin-bottom:4px;"><i class="fas fa-check-circle"></i> 処理結果</h2>
@@ -447,36 +470,6 @@
           <i class="fas fa-times"></i> 閉じる
         </button>
       </div>
-      <header class="sidebar-header">
-        <img src="https://www.gstatic.com/images/branding/product/1x/apps_script_48dp.png" alt="Logo" class="logo">
-        <p>バージョン <?= version ?></p>
-      </header>
-      
-      <section class="section">
-        <h2>使い方ガイド</h2>
-        <button class="btn btn-outline full-width" id="toggle-workflow" style="height: 32px; padding: 6px 8px; white-space: nowrap; margin-bottom: 6px;">
-          <i class="fas fa-book"></i> ワークフローを表示
-        </button>
-        
-        <div id="workflow-guide" style="display: none; margin-top: 6px; padding: 6px; background: #f5f5f5; border-radius: 4px; font-size: 12px;">
-          <h3 style="font-size: 14px; margin-bottom: 8px; color: var(--primary-dark);">基本的なワークフロー</h3>
-          <ol style="padding-left: 20px; margin-bottom: 10px;">
-            <li style="margin-bottom: 6px;">「CSVファイルを選択」ボタンでデータをインポート</li>
-            <li style="margin-bottom: 6px;">「全処理一括実行」で自動処理を実行</li>
-            <li style="margin-bottom: 6px;">「CSVエクスポート」で処理済みデータを出力</li>
-          </ol>
-          
-          <h3 style="font-size: 14px; margin: 12px 0 8px; color: var(--primary-dark);">詳細ステップ</h3>
-          <ol style="padding-left: 20px;">
-            <li style="margin-bottom: 6px;"><strong>データ準備</strong>: CSVファイルを選択してインポート</li>
-            <li style="margin-bottom: 6px;"><strong>フィルター処理</strong>: NGワード削除、重複チェック、文字数制限、所在地情報修正、価格フィルター</li>
-            <li style="margin-bottom: 6px;"><strong>データ確認</strong>: スプレッドシートで処理結果を確認</li>
-            <li style="margin-bottom: 6px;"><strong>データ出力</strong>: CSVエクスポート機能で最終データを出力</li>
-          </ol>
-          
-          <p style="margin-top: 12px; font-style: italic; color: var(--text-secondary);">※ 個別のフィルター処理は「個別フィルター処理を表示」から実行できます</p>
-        </div>
-      </section>
       
       <section class="section">
         <h2>CSVインポート</h2>
@@ -534,6 +527,16 @@
         </div>
       </section>
       
+      <section class="section">
+        <h2>データ管理</h2>
+        <button class="btn btn-outline full-width" id="initialize-btn" style="height: 44px; padding: 8px 12px; white-space: nowrap; color: #F44336; border-color: #F44336;">
+          <i class="fas fa-trash-alt"></i> データ初期化
+        </button>
+        <p style="font-size: 11px; margin-top: 6px; color: #757575;">
+          ※ 出品データとログを削除します。この操作は元に戻せません。
+        </p>
+      </section>
+      
       <section class="section" id="ng-words-section">
         <h2>設定</h2>
         <p style="margin-bottom: 10px; font-size: 13px; color: var(--text-secondary);">
@@ -544,8 +547,31 @@
         </button>
       </section>
       
-      <div id="notification" class="notification"></div>
+      <!-- 使い方ガイドを設定の下に移動 -->
+      <section class="section">
+        <h2>使い方ガイド</h2>
+        <button class="btn btn-outline full-width" id="toggle-workflow" style="height: 32px; padding: 6px 8px; white-space: nowrap; margin-bottom: 6px;">
+          <i class="fas fa-book"></i> ワークフローを表示
+        </button>
+        <div id="workflow-guide" style="display: none; margin-top: 6px; padding: 6px; background: #f5f5f5; border-radius: 4px; font-size: 12px;">
+          <h3 style="font-size: 14px; margin-bottom: 8px; color: var(--primary-dark);">基本的なワークフロー</h3>
+          <ol style="padding-left: 20px; margin-bottom: 10px;">
+            <li style="margin-bottom: 6px;">「CSVファイルを選択」ボタンでデータをインポート</li>
+            <li style="margin-bottom: 6px;">「全処理一括実行」で自動処理を実行</li>
+            <li style="margin-bottom: 6px;">「CSVエクスポート」で処理済みデータを出力</li>
+          </ol>
+          <h3 style="font-size: 14px; margin: 12px 0 8px; color: var(--primary-dark);">詳細ステップ</h3>
+          <ol style="padding-left: 20px;">
+            <li style="margin-bottom: 6px;"><strong>データ準備</strong>: CSVファイルを選択してインポート</li>
+            <li style="margin-bottom: 6px;"><strong>フィルター処理</strong>: NGワード削除、重複チェック、文字数制限、所在地情報修正、価格フィルター</li>
+            <li style="margin-bottom: 6px;"><strong>データ確認</strong>: スプレッドシートで処理結果を確認</li>
+            <li style="margin-bottom: 6px;"><strong>データ出力</strong>: CSVエクスポート機能で最終データを出力</li>
+          </ol>
+          <p style="margin-top: 12px; font-style: italic; color: var(--text-secondary);">※ 個別のフィルター処理は「個別フィルター処理を表示」から実行できます</p>
+        </div>
+      </section>
       
+      <div id="notification" class="notification"></div>
       <footer class="sidebar-footer">
         <p>© 2025 みずのとい</p>
       </footer>
@@ -554,6 +580,8 @@
     <script>
       // DOMの読み込みが完了したら実行
       document.addEventListener('DOMContentLoaded', function() {
+        console.log('DOMContentLoaded - サイドバー初期化開始');
+        
         // ファイル選択ボタンの設定
         document.getElementById('file-select-btn').addEventListener('click', function() {
           document.getElementById('csv-file-input').click();
@@ -591,6 +619,9 @@
             return;
           }
           
+          // 前回の結果メッセージをクリア
+          clearResultMessage();
+          
           // プログレスバーを表示
           showProgress('CSVファイルをインポート中...', 0);
           
@@ -614,16 +645,26 @@
               google.script.run
                 .withSuccessHandler(function(result) {
                   if (result) {
+                    // インポート完了時に完了アイコンを表示
+                    showCompleteState("CSVファイルをインポート済み");
+                    
                     // ファイル選択表示をリセット
                     document.getElementById('csv-file-input').value = '';
                     document.getElementById('selected-file-display').textContent = '';
                     document.getElementById('import-csv-btn').style.display = 'none';
+                    
+                    // 成功メッセージを表示
+                    showResultMessage('success', 'インポート完了', 'CSVファイルのインポートが完了しました。次の処理を実行できます。');
+                    
+                    // エクスポートボタンの状態を更新
+                    updateExportButtonState();
                   } else {
+                    hideProgress(); // エラー時はプログレスバーを非表示
                     showNotification('error', 'インポート中にエラーが発生しました。');
                   }
                 })
                 .withFailureHandler(function(error) {
-                  hideProgress();
+                  hideProgress(); // エラー時はプログレスバーを非表示
                   showNotification('error', 'エラー: ' + (error.message || '不明なエラーが発生しました'));
                 })
                 .importCsvFromBase64(base64Data);
@@ -643,28 +684,58 @@
         
         // 各ボタンにイベントリスナーを設定
         document.getElementById('export-btn').addEventListener('click', function() {
-          // 「出品データ」シートを直接エクスポート
-          showProgress('CSVエクスポートを実行中...', 0);
+          // 前回の結果メッセージをクリア
+          clearResultMessage();
           
+          // 全処理一括実行の実行状態を確認
           google.script.run
-            .withSuccessHandler(function(result) {
-              hideProgress();
-              if (result && result.success) {
-                // CSVデータをダウンロード
-                downloadCSV(result.csvData, result.fileName);
-                showNotification('success', '出品データシートからCSVファイルをエクスポートしました');
-              } else {
-                showNotification('error', result ? result.message : 'エクスポートに失敗しました');
+            .withSuccessHandler(function(isExecuted) {
+              if (!isExecuted) {
+                // 全処理一括実行が未実行の場合、警告を表示
+                showResultMessage('warning', '処理順序の確認', 
+                  '全処理一括実行がまだ実行されていません。\n\n' +
+                  '正しい手順:\n' +
+                  '1. CSVインポート\n' +
+                  '2. 全処理一括実行 ← 未実行\n' +
+                  '3. CSVエクスポート\n\n' +
+                  '先に「全処理一括実行」ボタンを押してください。');
+                return;
               }
+              
+              // 全処理一括実行が完了している場合、エクスポートを実行
+              showProgress('CSVエクスポートを実行中...', 0);
+              
+              google.script.run
+                .withSuccessHandler(function(result) {
+                  hideProgress();
+                  if (result && result.success) {
+                    // CSVデータをダウンロード
+                    downloadCSV(result.csvData, result.fileName);
+                    
+                    // サイドバーに結果メッセージを表示
+                    showResultMessage('success', 'エクスポート完了', 
+                      `CSVファイル「${result.fileName}」を正常にエクスポートしました。\n\n` +
+                      `エクスポートしたデータ件数: ${result.rowCount || '不明'} 件`);
+                  } else {
+                    showNotification('error', result ? result.message : 'エクスポートに失敗しました');
+                  }
+                })
+                .withFailureHandler(function(error) {
+                  hideProgress();
+                  showNotification('error', 'エラー: ' + (error.message || 'エクスポート中にエラーが発生しました'));
+                })
+                .exportCsvFromSidebar('出品データ');
             })
             .withFailureHandler(function(error) {
-              hideProgress();
-              showNotification('error', 'エラー: ' + (error.message || 'エクスポート中にエラーが発生しました'));
+              showNotification('error', 'エラー: ' + (error.message || '実行状態の確認に失敗しました'));
             })
-            .exportCsvFromSidebar('出品データ');
+            .isAllProcessesExecuted();
         });
         
         document.getElementById('ngword-btn').addEventListener('click', function() {
+          // 前回の結果メッセージをクリア
+          clearResultMessage();
+          
           showProgress('NGワードフィルタリングを実行中...', 0);
           google.script.run
             .withSuccessHandler(onFilterComplete)
@@ -673,6 +744,9 @@
         });
         
         document.getElementById('duplicate-btn').addEventListener('click', function() {
+          // 前回の結果メッセージをクリア
+          clearResultMessage();
+          
           showProgress('重複チェックを実行中...', 0);
           google.script.run
             .withSuccessHandler(onFilterComplete)
@@ -681,6 +755,9 @@
         });
         
         document.getElementById('length-btn').addEventListener('click', function() {
+          // 前回の結果メッセージをクリア
+          clearResultMessage();
+          
           showProgress('文字数フィルタリングを実行中...', 0);
           google.script.run
             .withSuccessHandler(onFilterComplete)
@@ -689,6 +766,9 @@
         });
         
         document.getElementById('location-btn').addEventListener('click', function() {
+          // 前回の結果メッセージをクリア
+          clearResultMessage();
+          
           showProgress('所在地情報を修正中...', 0);
           google.script.run
             .withSuccessHandler(onFilterComplete)
@@ -697,6 +777,9 @@
         });
         
         document.getElementById('price-btn').addEventListener('click', function() {
+          // 前回の結果メッセージをクリア
+          clearResultMessage();
+          
           showProgress('価格フィルタリングを実行中...', 0);
           google.script.run
             .withSuccessHandler(onFilterComplete)
@@ -705,16 +788,62 @@
         });
         
         document.getElementById('run-all-btn').addEventListener('click', function() {
-          showProgress('全処理を実行中...', 0);
-          google.script.run
-            .withSuccessHandler(onFilterComplete)
-            .withFailureHandler(onError)
-            .runAllProcesses();
+          // 前回の結果メッセージをクリア
+          clearResultMessage();
+          
+          // プログレスバーを強制的に表示
+          const progressContainer = document.getElementById('progress-container');
+          progressContainer.style.display = 'block';
+          document.getElementById('progress-message').textContent = '全処理一括実行準備中...';
+          document.getElementById('process-status').textContent = '1%';
+          
+          // プログレスバーのスタイルを強制的にリフロー
+          void progressContainer.offsetWidth;
+          
+          // 少し遅延させて処理開始
+          setTimeout(function() {
+            google.script.run
+              .withSuccessHandler(onFilterComplete)
+              .withFailureHandler(onError)
+              .runAllProcesses();
+          }, 300);
         });
         
         // NGワード設定を開くボタンの設定
         document.getElementById('open-ng-settings-btn').addEventListener('click', function() {
           google.script.run.openNgWordsSettings();
+        });
+        
+        // 初期化ボタンの設定
+        document.getElementById('initialize-btn').addEventListener('click', function() {
+          // 確認ダイアログを表示
+          if (confirm('出品データとログを初期化します。この操作は元に戻せません。よろしいですか？')) {
+            // プログレスバーを表示
+            showProgress('データを初期化中...', 0);
+            
+            // サーバー側の初期化関数を呼び出し
+            google.script.run
+              .withSuccessHandler(function(result) {
+                hideProgress();
+                if (result && result.success) {
+                  // 成功メッセージを表示
+                  showResultMessage('success', 'データ初期化完了', 'データの初期化が完了しました。');
+                  
+                  // 1秒後にサイドバーを再読み込み
+                  setTimeout(function() {
+                    google.script.run.reloadSidebar();
+                  }, 1000);
+                } else {
+                  // エラーメッセージを表示
+                  showResultMessage('error', '初期化エラー', result.message || '初期化中にエラーが発生しました。');
+                }
+              })
+              .withFailureHandler(function(error) {
+                hideProgress();
+                showResultMessage('error', '初期化エラー', '初期化中にエラーが発生しました: ' + error.message);
+              })
+              .initializeData();
+          }
         });
         
         // 個別フィルター処理のトグルボタン設定
@@ -756,16 +885,112 @@
           clearResultMessage();
         });
         
-        // 直近の処理メッセージを取得して表示
-        google.script.run.withSuccessHandler(function(msg) {
-          if (msg && msg.type === 'success') {
-            showResultMessage(msg.type, msg.title, msg.content);
-          }
-        }).getLastResultMessage();
+        // 初期状態でプログレスバーを非表示に
+        hideProgress();
+        
+        // プログレスバー表示状態の更新を開始
+        startProgressUpdateTimer();
+        
+        // 直近の処理メッセージを取得して表示（起動時）
+        fetchLastResultMessage();
+        
+        // 定期的にサーバーからの最新メッセージを取得（3秒ごと）
+        setInterval(fetchLastResultMessage, 3000);
+        
+        console.log('DOMContentLoaded - サイドバー初期化完了');
+        
+        // エクスポートボタンの初期状態を設定
+        updateExportButtonState();
       });
+      
+      // サーバーから最新の結果メッセージを取得
+      function fetchLastResultMessage() {
+        google.script.run
+          .withSuccessHandler(function(msg) {
+            console.log('受信したメッセージ:', msg);
+            
+            if (msg) {
+              if (msg.type === 'success' || msg.type === 'error' || msg.type === 'warning') {
+                showResultMessage(msg.type, msg.title || '', msg.content || '');
+              } else if (msg.type === 'result') {
+                // 処理結果メッセージの場合
+                showProcessResult(msg.title, msg.stats, msg.additionalInfo);
+              }
+            }
+          })
+          .withFailureHandler(function(error) {
+            console.error('メッセージ取得エラー:', error);
+          })
+          .getLastResultMessage();
+      }
+      
+      // 処理結果を表示する関数
+      function showProcessResult(title, stats, additionalInfo) {
+        console.log('showProcessResult呼び出し:', title, stats, additionalInfo);
+        
+        const container = document.getElementById('result-message-container');
+        const contentElement = document.getElementById('result-message-content');
+        
+        // 表示がない場合はスキップ
+        if (!title) return;
+        
+        // statsがない場合は空オブジェクトで初期化
+        stats = stats || { removedCount: 0, modifiedCount: 0 };
+        
+        // コンテナを表示
+        container.style.display = 'block';
+        
+        // 現在の日時を取得
+        const now = new Date();
+        const timestamp = now.toLocaleString('ja-JP');
+        
+        // 削除・修正・総処理件数を取得
+        const removedCount = stats.removedCount || 0;
+        const modifiedCount = stats.modifiedCount || 0;
+        const totalProcessed = stats.totalProcessed || 0;
+        const beforeCount = stats.beforeCount || 0;
+        const afterCount = stats.afterCount || 0;
+        
+        // メッセージHTMLを生成
+        let messageHTML = `<div class="result-message success">`;
+        messageHTML += `<div class="timestamp">${timestamp}</div>`;
+        messageHTML += `<h3>${title}</h3>`;
+        
+        // データ処理情報
+        if (beforeCount > 0 || afterCount > 0) {
+          messageHTML += `<div class="data-count-comparison">処理前: ${beforeCount}件 → 処理後: ${afterCount}件</div>`;
+        }
+        
+        // 変更情報
+        messageHTML += `<p class="change-info">削除: ${removedCount}件 / 修正: ${modifiedCount}件</p>`;
+        
+        // 追加情報（改行を<br>に変換）
+        if (additionalInfo) {
+          const formattedInfo = additionalInfo.replace(/\n/g, '<br>');
+          messageHTML += `<div class="additional-info">${formattedInfo}</div>`;
+        }
+        
+        messageHTML += `</div>`;
+        
+        // 内容を設定
+        contentElement.innerHTML = messageHTML;
+        
+        // コンテナまでスクロール
+        container.scrollIntoView({ behavior: 'smooth' });
+        
+        // 結果メッセージコンテナを確実に表示
+        setTimeout(function() {
+          if (container.style.display !== 'block') {
+            container.style.display = 'block';
+            container.scrollIntoView({ behavior: 'smooth' });
+          }
+        }, 100);
+      }
       
       // 通知を表示する
       function showNotification(type, message, temporary = true) {
+        console.log('showNotification呼び出し:', type, message);
+        
         if (temporary) {
           // 一時的な通知の場合
           const notification = document.getElementById('notification');
@@ -783,32 +1008,59 @@
       
       // 結果メッセージを表示する
       function showResultMessage(type, title, content) {
+        console.log('showResultMessage called', type, title);
         const container = document.getElementById('result-message-container');
         const contentElement = document.getElementById('result-message-content');
         
-        // コンテナを表示
-        container.style.display = 'block';
+        // スタイルの設定
+        let messageStyle = '';
+        let iconClass = '';
         
-        // メッセージHTMLを生成
-        let messageHTML = `<div class="result-message ${type}">`;
+        if (type === 'success') {
+          messageStyle = 'background-color: #e8f5e9; border-left: 4px solid #4caf50;';
+          iconClass = 'fas fa-check-circle';
+        } else if (type === 'error') {
+          messageStyle = 'background-color: #ffebee; border-left: 4px solid #f44336;';
+          iconClass = 'fas fa-exclamation-circle';
+        } else if (type === 'warning') {
+          messageStyle = 'background-color: #fff8e1; border-left: 4px solid #ffc107;';
+          iconClass = 'fas fa-exclamation-triangle';
+        } else {
+          messageStyle = 'background-color: #e3f2fd; border-left: 4px solid #2196f3;';
+          iconClass = 'fas fa-info-circle';
+        }
         
-        // タイトルが空の場合はデフォルトタイトルを設定
+        // メッセージを構築
+        let messageHTML = `
+          <div style="${messageStyle} padding: 12px; border-radius: 4px; margin-bottom: 10px;">
+            <div style="display: flex; align-items: center; margin-bottom: 8px;">
+              <i class="${iconClass}" style="margin-right: 8px; font-size: 18px; 
+                 color: ${type === 'success' ? '#4caf50' : type === 'error' ? '#f44336' : type === 'warning' ? '#ffc107' : '#2196f3'};"></i>
+        `;
+        
+        // タイトルが指定されていない場合はデフォルトのタイトルを設定
         if (!title) {
           if (type === 'success') {
-            title = '処理完了';
+            title = '成功';
           } else if (type === 'error') {
             title = 'エラー';
+          } else if (type === 'warning') {
+            title = '警告';
           } else {
             title = 'お知らせ';
           }
         }
         
         messageHTML += `<h3>${title}</h3>`;
+        messageHTML += `</div>`;
         messageHTML += `<p>${content}</p>`;
         messageHTML += `</div>`;
         
         // 内容を設定
         contentElement.innerHTML = messageHTML;
+        
+        // コンテナを表示
+        container.style.display = 'block';
         
         // コンテナまでスクロール
         container.scrollIntoView({ behavior: 'smooth' });
@@ -839,6 +1091,8 @@
           // 結果メッセージとして表示する（一時的な通知ではなく固定表示）
           showResultMessage('success', '処理完了', formattedMessage);
         }
+        // エクスポートボタンの状態を更新
+        updateExportButtonState();
       }
       
       // エラー発生時の処理
@@ -848,58 +1102,192 @@
         showResultMessage('error', 'エラーが発生しました', error.message);
       }
       
-      // プログレスバーを表示
-      function showProgress(message, percent) {
-        // 結果メッセージが表示されていれば隠す
-        // clearResultMessage();
+      // エクスポートボタンの状態を更新する関数
+      function updateExportButtonState() {
+        google.script.run
+          .withSuccessHandler(function(isExecuted) {
+            const exportBtn = document.getElementById('export-btn');
+            if (exportBtn) {
+              if (isExecuted) {
+                // 全処理一括実行が完了している場合
+                exportBtn.style.opacity = '1';
+                exportBtn.style.cursor = 'pointer';
+                exportBtn.style.backgroundColor = 'var(--primary-color)';
+                exportBtn.title = 'CSVファイルをエクスポートします';
+              } else {
+                // 全処理一括実行が未実行の場合
+                exportBtn.style.opacity = '0.6';
+                exportBtn.style.cursor = 'not-allowed';
+                exportBtn.style.backgroundColor = '#ccc';
+                exportBtn.title = '全処理一括実行を先に実行してください';
+              }
+            }
+          })
+          .withFailureHandler(function(error) {
+            console.error('エクスポートボタンの状態更新に失敗:', error);
+          })
+          .isAllProcessesExecuted();
+      }
+      
+      // プログレスバーの状態をリセットする関数
+      function resetProgressBar() {
+        console.log('resetProgressBar called');
         
-        document.getElementById('progress-container').style.display = 'block';
-        document.getElementById('progress-message').textContent = message;
-        document.getElementById('progress-bar').style.width = percent + '%';
-        document.getElementById('progress-percent').textContent = percent + '%';
+        // タイマーを停止
+        stopProgressUpdateTimer();
+        
+        // プログレスバーのリセット
+        const progressContainer = document.getElementById('progress-container');
+        const spinner = document.querySelector('.spinner');
+        
+        // スピナーを表示
+        if (spinner) spinner.style.display = 'block';
+        
+        // メッセージをリセット
+        document.getElementById('progress-message').textContent = '処理を開始しています...';
+        
+        // プログレスバーを表示
+        if (progressContainer) {
+          progressContainer.style.display = 'block';
+          progressContainer.style.visibility = 'visible';
+        }
         
         // プログレス更新タイマーを開始
         startProgressUpdateTimer();
+        
+        console.log('Progress bar reset complete');
       }
       
-      // プログレスバーを更新
-      function updateProgress(percent) {
-        document.getElementById('progress-bar').style.width = percent + '%';
-        document.getElementById('progress-percent').textContent = percent + '%';
+      // プログレスバーを表示
+      function showProgressBar(message, reset) {
+        console.log('showProgressBar called: ' + message);
+        
+        // reset=trueなら強制的にリセット
+        if (reset === true) {
+          resetProgressBar();
+        }
+        
+        // 処理開始時は常にスピナーを表示
+        const spinner = document.querySelector('.spinner');
+        if (spinner) spinner.style.display = 'block';
+        
+        // プログレスバーの表示
+        const progressContainer = document.getElementById('progress-container');
+        progressContainer.style.display = 'block';
+        progressContainer.style.visibility = 'visible';
+        document.getElementById('progress-message').textContent = message || '処理中...';
+        
+        // DOM更新を強制
+        setTimeout(function() {
+          // 再度表示を確認
+          if (progressContainer.style.display !== 'block') {
+            progressContainer.style.display = 'block';
+          }
+          // スピナー表示を再確認
+          if (spinner && spinner.style.display !== 'block') {
+            spinner.style.display = 'block';
+          }
+        }, 10);
+      }
+      
+      // 古いshowProgress関数を置き換え
+      function showProgress(message, percent) {
+        showProgressBar(message, true);
+      }
+      
+      // 処理完了時の表示に切り替え
+      function showCompleteState(message) {
+        // スピナーは表示したまま
+        const spinner = document.querySelector('.spinner');
+        if (spinner) spinner.style.display = 'block';
+        
+        // メッセージを更新
+        document.getElementById('progress-message').textContent = message || '処理が完了しました';
+        
+        // タイマーを停止
+        stopProgressUpdateTimer();
+        
+        // 少し待ってからプログレスバーを非表示にする
+        setTimeout(function() {
+          hideProgress();
+        }, 1500);
       }
       
       // プログレスバーを非表示
       function hideProgress() {
-        // 何もしない（常時表示）
+        console.log('hideProgress called');
+        document.getElementById('progress-container').style.display = 'none';
+        stopProgressUpdateTimer();
       }
       
       // プログレス更新タイマーID
       let progressUpdateTimerId = null;
+      let lastProgressUpdate = 0;
+      let failedUpdateCount = 0;
       
       // プログレス更新タイマーを開始
       function startProgressUpdateTimer() {
         // 既存のタイマーがあれば停止
         stopProgressUpdateTimer();
         
-        // 新しいタイマーを開始（500ミリ秒ごとに更新 - より頻繁に更新）
+        // 変数をリセット
+        lastProgressUpdate = 0;
+        failedUpdateCount = 0;
+        
+        console.log('Starting progress update timer');
+        
+        // 新しいタイマーを開始（300ミリ秒ごとに更新）
         progressUpdateTimerId = setInterval(function() {
           // サーバーから最新のプログレス状態を取得
           google.script.run
             .withSuccessHandler(function(progressState) {
               if (progressState) {
+                console.log('Progress state received:', progressState);
+                
                 // 状態が非表示なら、プログレスバーを隠す
                 if (!progressState.isVisible) {
                   hideProgress();
                   return;
                 }
                 
-                // メッセージとパーセンテージを更新
-                document.getElementById('progress-message').textContent = progressState.message || '処理中...';
-                updateProgress(progressState.percent || 0);
+                // プログレスバーが表示されていないなら表示する
+                const progressContainer = document.getElementById('progress-container');
+                if (progressContainer.style.display !== 'block') {
+                  progressContainer.style.display = 'block';
+                  progressContainer.style.visibility = 'visible';
+                }
+                
+                // メッセージ更新
+                const messageElement = document.getElementById('progress-message');
+                if (messageElement) {
+                  messageElement.textContent = progressState.message || '処理中...';
+                }
+                
+                // スピナーが表示されていることを確認 - この部分を強化
+                const spinner = document.querySelector('.spinner');
+                if (spinner) {
+                  // 明示的にスピナーを表示させる
+                  spinner.style.display = 'block';
+                  
+                  // 重要: スタイルの再計算を強制する
+                  void spinner.offsetHeight;
+                }
+                
+                // 前回と同じ値なら失敗カウントを増やす
+                if (progressState.percent === lastProgressUpdate) {
+                  failedUpdateCount++;
+                } else {
+                  // 新しい値が来たらリセット
+                  failedUpdateCount = 0;
+                  lastProgressUpdate = progressState.percent;
+                }
               }
             })
+            .withFailureHandler(function(error) {
+              console.error('Progress update failed:', error);
+            })
             .getProgressState();
-        }, 500);
+        }, 300);
       }
       
       // プログレス更新タイマーを停止

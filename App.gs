@@ -3,12 +3,13 @@
  * 
  * メインアプリケーションの初期化、UI表示、イベントハンドリングを担当します。
  * 
- * バージョン: v1.4.11
- * 最終更新日: 2025-05-29
+ * バージョン: v1.5.13
+ * 最終更新日: 2025-06-14
+ * 更新内容: 処理完了メッセージから詳細情報を削除
  */
 
 // アプリケーションのバージョン情報
-const APP_VERSION = 'v1.4.11';
+const APP_VERSION = 'v1.5.13';
 
 /**
  * eBayツール出品ファイル加工ツール
@@ -16,35 +17,6 @@ const APP_VERSION = 'v1.4.11';
  * このスクリプトはeBay出品作業を効率化するためのGoogle Apps Scriptプロジェクトです。
  * 商品データの処理、フィルタリング、eBayフォーマットへの変換を自動化します。
  */
-
-// スプレッドシートが開かれたときに実行
-function onOpen() {
-  createMenu();
-  showSidebar();
-}
-
-// カスタムメニューの作成
-function createMenu() {
-  const ui = SpreadsheetApp.getUi();
-  ui.createMenu('eBayツール')
-    .addItem('サイドバーを表示', 'showSidebar')
-    .addSeparator()
-    .addItem('ヘルプ', 'UI.showHelpDialog')
-    .addToUi();
-}
-
-// サイドバーの表示
-function showSidebar() {
-  const template = HtmlService.createTemplateFromFile('Sidebar');
-  
-  // テンプレートにバージョン情報を渡す
-  template.version = APP_VERSION;
-  
-  const html = template.evaluate()
-    .setTitle('eBayツール出品ファイル加工ツール')
-    .setWidth(300);
-  SpreadsheetApp.getUi().showSidebar(html);
-}
 
 // グローバル関数としてUI関数をエクスポート（サイドバーからのアクセス用）
 function showImportDialog() {
@@ -84,12 +56,143 @@ function runPriceFilter() {
   return Filters.runPriceFilter();
 }
 
+// プログレスバーの状態をリセットする
+function resetProgressState() {
+  return UI.resetProgressState();
+}
+
+/**
+ * HTMLファイルを含める
+ * @param {string} filename 含めるHTMLファイル名
+ * @return {string} HTMLコンテンツ
+ */
+function include(filename) {
+  return HtmlService.createHtmlOutputFromFile(filename).getContent();
+}
+
+// 共通ユーティリティ関数
+
+/**
+ * 日付を「YYYY-MM-DD」形式でフォーマットする
+ * @param {Date} date 日付
+ * @return {string} フォーマットされた日付文字列
+ */
+function formatDate(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * 日時を「YYYY-MM-DD HH:MM:SS」形式でフォーマットする
+ * @param {Date} date 日時
+ * @return {string} フォーマットされた日時文字列
+ */
+function formatDateTime(date) {
+  const dateStr = formatDate(date);
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  const seconds = String(date.getSeconds()).padStart(2, '0');
+  return `${dateStr} ${hours}:${minutes}:${seconds}`;
+}
+
+/**
+ * 現在のタイムスタンプを取得する
+ * @return {string} 現在の日時文字列
+ */
+function getCurrentTimestamp() {
+  return formatDateTime(new Date());
+}
+
+/**
+ * 文字列の前後の空白を除去する
+ * @param {string} str 入力文字列
+ * @return {string} トリムされた文字列
+ */
+function trimString(str) {
+  if (!str) return '';
+  return String(str).trim();
+}
+
+/**
+ * 数値を通貨形式でフォーマットする
+ * @param {number} value 数値
+ * @param {string} currency 通貨コード（デフォルト: 'USD'）
+ * @return {string} フォーマットされた通貨文字列
+ */
+function formatCurrency(value, currency = 'USD') {
+  if (isNaN(value)) return '';
+  
+  try {
+    return new Intl.NumberFormat('en-US', { 
+      style: 'currency', 
+      currency: currency,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(value);
+  } catch (e) {
+    // フォールバックとして単純なフォーマットを使用
+    return `$${value.toFixed(2)}`;
+  }
+}
+
+// スプレッドシートが開かれたときに実行
+function onOpen() {
+  createMenu();
+  showSidebar();
+}
+
+// カスタムメニューの作成
+function createMenu() {
+  const ui = SpreadsheetApp.getUi();
+  ui.createMenu('eBayツール')
+    .addItem('サイドバーを表示', 'showSidebar')
+    .addSeparator()
+    .addItem('ヘルプ', 'UI.showHelpDialog')
+    .addToUi();
+}
+
+// サイドバーの表示
+function showSidebar() {
+  const template = HtmlService.createTemplateFromFile('Sidebar');
+  
+  // テンプレートにバージョン情報を渡す
+  template.version = APP_VERSION;
+  
+  const html = template.evaluate()
+    .setTitle('eBayツール出品ファイル加工ツール')
+    .setWidth(300);
+  SpreadsheetApp.getUi().showSidebar(html);
+}
+
 // すべての処理を順番に実行
 function runAllProcesses() {
   // ログ記録開始
   Logger.startProcess('全処理一括実行');
   
   try {
+    // 処理開始時に必ず前回の状態をリセットし、プログレスバーを表示
+    resetProgressState();
+    UI.showProgressBar('全処理一括実行を開始しています...', true);
+    
+    // プログレスバー更新を強制的に行うために短い遅延を入れる
+    Utilities.sleep(300);
+    
+    // 各処理の配分（重要度や処理時間に応じて配分）
+    const progressTracker = UI.ProgressTracker.init({
+      preparation: 5,     // 準備段階
+      ngWordFilter: 20,   // NGワードフィルター（重要度高）
+      duplicateCheck: 15, // 重複チェック
+      lengthFilter: 15,   // 文字数フィルター
+      locationFix: 15,    // 所在地情報修正
+      priceFilter: 20,    // 価格フィルター（重要度高）
+      finalization: 10    // 最終処理
+    });
+    
+    // 準備段階
+    progressTracker.startStage('preparation', 'データの準備をしています...');
+    
     // 処理前のデータ行数を取得
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const listingSheet = ss.getSheetByName(Config.SHEET_NAMES.LISTING);
@@ -114,61 +217,57 @@ function runAllProcesses() {
       priceFilter: { removed: 0, threshold: 0 }
     };
     
-    // プログレスバーの更新
-    UI.updateProgressBar(10);
+    // 準備段階完了
+    progressTracker.completeStage();
     
     // NGワードフィルター実行
-    UI.showProgressBar('NGワードフィルタリングを実行中...');
+    progressTracker.startStage('ngWordFilter', 'NGワードフィルタリングを実行中...');
     const ngWordResult = Filters.runNgWordFilter();
     if (ngWordResult && ngWordResult.stats) {
       results.ngWordFilter.removed = ngWordResult.stats.removedCount || 0;
       results.ngWordFilter.modified = ngWordResult.stats.modifiedCount || 0;
     }
-    
-    // プログレスバーの更新
-    UI.updateProgressBar(30);
+    progressTracker.completeStage();
     
     // 重複チェック実行
-    UI.showProgressBar('重複チェックを実行中...');
+    progressTracker.startStage('duplicateCheck', '重複チェックを実行中...');
     const duplicateResult = Filters.runDuplicateCheck();
     if (duplicateResult && duplicateResult.stats) {
       results.duplicateCheck.removed = duplicateResult.stats.removedCount || 0;
     }
-    
-    // プログレスバーの更新
-    UI.updateProgressBar(50);
+    progressTracker.completeStage();
     
     // 文字数フィルター実行
-    UI.showProgressBar('文字数フィルタリングを実行中...');
+    progressTracker.startStage('lengthFilter', '文字数フィルタリングを実行中...');
     const lengthResult = Filters.runLengthFilter();
     if (lengthResult && lengthResult.stats) {
       results.lengthFilter.removed = lengthResult.stats.removedCount || 0;
       results.lengthFilter.limit = lengthResult.stats.characterLimit || 0;
     }
-    
-    // プログレスバーの更新
-    UI.updateProgressBar(70);
+    progressTracker.completeStage();
     
     // 所在地情報修正実行
-    UI.showProgressBar('所在地情報修正を実行中...');
+    progressTracker.startStage('locationFix', '所在地情報修正を実行中...');
     const locationResult = Filters.runLocationFix();
     if (locationResult && locationResult.stats) {
       results.locationFix.modified = locationResult.stats.modifiedCount || 0;
     }
-    
-    // プログレスバーの更新
-    UI.updateProgressBar(90);
+    progressTracker.completeStage();
     
     // 価格フィルター実行
-    UI.showProgressBar('価格フィルタリングを実行中...');
+    progressTracker.startStage('priceFilter', '価格フィルタリングを実行中...');
     const priceResult = Filters.runPriceFilter();
     if (priceResult && priceResult.stats) {
       results.priceFilter.removed = priceResult.stats.removedCount || 0;
       results.priceFilter.threshold = priceResult.stats.priceThreshold || 0;
     }
+    progressTracker.completeStage();
     
-    // プログレスバーの更新
-    UI.updateProgressBar(100);
+    // 最終処理
+    progressTracker.startStage('finalization', '処理を完了しています...');
+    
+    // わずかな遅延を入れる（体感的な進行感のため）
+    Utilities.sleep(200);
     
     // 開始時間を元に戻す
     Logger.processStartTime = savedStartTime;
@@ -189,10 +288,17 @@ function runAllProcesses() {
       `■ 所在地情報: ${results.locationFix.modified}件修正\n` +
       `■ 価格フィルター($${results.priceFilter.threshold}以下): ${results.priceFilter.removed}件削除`;
     
+    // 完了表示
+    progressTracker.complete('処理が完了しました');
+    
+    // 進捗を100%に更新（完了フラグはfalseのまま）
+    UI.updateProgressBar(100);
+    
+    // 少し待機してからプログレスバーを非表示
+    Utilities.sleep(1500);
+    
     // プログレスバーを非表示
     UI.hideProgressBar();
-    // 完了時に進捗を100%に
-    UI.updateProgressBar(100);
     
     // 完了メッセージをUI.showResultMessageで表示
     UI.showResultMessage(
@@ -207,8 +313,25 @@ function runAllProcesses() {
       additionalInfo
     );
     
+    // 確実にメッセージを表示するため、LAST_RESULT_MESSAGEを直接設定
+    LAST_RESULT_MESSAGE = {
+      type: 'result',
+      title: 'すべての処理が完了しました',
+      stats: {
+        removedCount: totalRemoved,
+        modifiedCount: totalModified,
+        totalProcessed: beforeDataCount,
+        beforeCount: beforeDataCount,
+        afterCount: afterDataCount
+      },
+      additionalInfo: additionalInfo
+    };
+    
     // ログ記録終了
     Logger.endProcess('全処理一括実行 成功');
+    
+    // 全処理一括実行完了フラグを設定
+    setAllProcessesExecuted(true);
     
     // クライアント側表示用のメッセージを作成
     const clientSideMessage = `すべての処理が完了しました（データ数: ${beforeDataCount}件 → ${afterDataCount}件, 削除: ${totalRemoved}件, 修正: ${totalModified}件）\n\n${additionalInfo}`;
@@ -228,6 +351,37 @@ function runAllProcesses() {
       message: '処理中にエラーが発生しました: ' + error.message
     };
   }
+}
+
+/**
+ * 全処理一括実行の実行状態を管理するフラグ
+ * CSVインポート後にfalseにリセットされ、全処理一括実行完了後にtrueになる
+ */
+var ALL_PROCESSES_EXECUTED = false;
+
+/**
+ * 全処理一括実行の実行状態を取得
+ * @return {boolean} 実行済みの場合true、未実行の場合false
+ */
+function isAllProcessesExecuted() {
+  return ALL_PROCESSES_EXECUTED;
+}
+
+/**
+ * 全処理一括実行の実行状態を設定
+ * @param {boolean} executed 実行状態
+ */
+function setAllProcessesExecuted(executed) {
+  ALL_PROCESSES_EXECUTED = executed;
+  Logger.logInfo('全処理一括実行の実行状態を更新: ' + (executed ? '実行済み' : '未実行'));
+}
+
+/**
+ * 全処理一括実行の実行状態をリセット（CSVインポート時に呼び出される）
+ */
+function resetAllProcessesExecuted() {
+  ALL_PROCESSES_EXECUTED = false;
+  Logger.logInfo('全処理一括実行の実行状態をリセット');
 }
 
 // スクリプト実行時の初期設定
@@ -443,11 +597,23 @@ function exportToCsv(sheetName) {
 function exportCsvFromSidebar(sheetName) {
   try {
     const result = ImportExport.exportToCsv(sheetName);
+    
+    // シートからデータ行数を取得
+    let rowCount = 0;
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(sheetName || Config.SHEET_NAMES.LISTING);
+    
+    if (sheet) {
+      // ヘッダー行を除いた行数
+      rowCount = Math.max(0, sheet.getLastRow() - 1);
+    }
+    
     if (result) {
       return {
         success: true,
         csvData: result.csvData,
-        fileName: result.fileName
+        fileName: result.fileName,
+        rowCount: rowCount  // データ行数を追加
       };
     } else {
       return {

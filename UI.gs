@@ -3,8 +3,9 @@
  * 
  * ユーザーインターフェース関連の処理を提供します。
  * 
- * バージョン: v1.3.7
- * 最終更新日: 2025-05-29
+ * バージョン: v1.5.13
+ * 最終更新日: 2025-06-14
+ * 更新内容: 処理完了メッセージから詳細情報を削除
  */
 
 // UI名前空間
@@ -12,6 +13,14 @@ const UI = {};
 
 // 直近の成功メッセージを保存するグローバル変数
 let LAST_RESULT_MESSAGE = null;
+
+// プログレスバーの状態を保持するグローバル変数
+let _progressState = {
+  isVisible: false,
+  message: '',
+  percent: 0,
+  completion: false
+};
 
 /**
  * サイドバーを表示する
@@ -122,6 +131,32 @@ UI.showTestDataHelpDialog = function() {
 };
 
 /**
+ * プログレスバーの状態をリセットする
+ * 処理開始前に既存のプログレスバーの状態をリセットするために使用
+ */
+UI.resetProgressState = function() {
+  try {
+    // グローバル変数として保存されるプログレス状態をリセット
+    _progressState = {
+      isVisible: true,
+      message: '処理を開始しています...',
+      percent: 0,
+      completion: false  // 重要: 完了フラグを必ずfalseに設定
+    };
+    
+    // サイドバーHTMLへのスクリプト実行は不要
+    // クライアント側のgetProgressState()が定期的に状態を取得するため
+    
+    Logger.log('プログレスバーをリセットしました');
+  } catch (e) {
+    console.error('Error in resetProgressState:', e);
+    Logger.logError('プログレスバーリセット失敗: ' + e.message);
+  }
+  
+  return true;
+};
+
+/**
  * 成功メッセージを表示する
  * @param {string} message 表示するメッセージ
  */
@@ -133,23 +168,15 @@ UI.showSuccessMessage = function(message) {
       title: '処理完了',
       content: message
     };
-    // UIが利用可能かチェック
-    try {
-      SpreadsheetApp.getUi();
-    } catch (e) {
-      // UIが利用できない場合はログのみに記録
-      console.log('成功: ' + message);
-      Logger.log('UI利用不可のためログのみに記録(成功): ' + message);
-      return;
-    }
     
-    // トースト通知は表示しない（削除）
-    // ログのみに記録
+    // ログに記録
     Logger.log('成功: ' + message);
-  } catch (finalError) {
-    // 最終的なフォールバック - ログのみ
-    console.log('成功メッセージ表示失敗: ' + message);
-    Logger.log('成功メッセージ表示失敗: ' + message);
+    
+    // サイドバー表示用の処理は不要
+    // getLastResultMessage()がクライアント側から定期的に呼ばれるため
+  } catch (error) {
+    // ログのみに記録
+    Logger.log('成功メッセージ表示失敗: ' + error.message);
   }
 };
 
@@ -215,42 +242,21 @@ UI.showDetailedSuccessMessage = function(title, details) {
  */
 UI.showErrorMessage = function(message) {
   try {
-    // UIが利用可能かチェック
-    try {
-      SpreadsheetApp.getUi();
-    } catch (e) {
-      // UIが利用できない場合はログのみに記録
-      console.error('UI利用不可: ' + message);
-      Logger.logError('UI利用不可のためログのみに記録: ' + message);
-      return;
-    }
+    // 直近のメッセージを保存
+    LAST_RESULT_MESSAGE = {
+      type: 'error',
+      title: 'エラー',
+      content: message
+    };
     
-    // トーストを使用してメッセージを表示（ダイアログなし）
-    SpreadsheetApp.getActive().toast(message, 'エラー', 5);
+    // ログに記録
+    Logger.logError('エラー: ' + message);
     
-    // サイドバーに通知を表示（可能な場合）
-    try {
-      const script = `
-        if (typeof showNotification === 'function') {
-          showNotification('error', '${message.replace(/'/g, "\\'")}');
-        }
-      `;
-      
-      // サイドバーへのメッセージ送信を試行（エラーは無視）
-      ScriptApp.run(() => {
-        try {
-          const html = HtmlService.createHtmlOutput(`<script>${script}</script>`);
-        } catch (e) {
-          // サイドバー通知に失敗してもトーストには表示されているので無視
-        }
-      });
-    } catch (e) {
-      // サイドバー通知に失敗してもトーストには表示されているので無視
-    }
-  } catch (finalError) {
-    // 最終的なフォールバック - ログのみ
-    console.error('エラーメッセージ表示失敗: ' + message);
-    Logger.logError('エラーメッセージ表示失敗: ' + message);
+    // サイドバー表示用の処理は不要
+    // getLastResultMessage()がクライアント側から定期的に呼ばれるため
+  } catch (error) {
+    // ログのみに記録
+    Logger.logError('エラーメッセージ表示失敗: ' + error.message);
   }
 };
 
@@ -277,44 +283,82 @@ function loadProgressState() {
 /**
  * プログレスバーを表示する
  * @param {string} message 表示するメッセージ
+ * @param {boolean} reset リセットフラグ（省略可）
  */
-UI.showProgressBar = function(message) {
+UI.showProgressBar = function(message, reset) {
   try {
+    // サイドバーに通知を表示（可能な場合）
     try {
-      SpreadsheetApp.getUi();
+      // エスケープ処理を行う
+      const escapedMessage = message.replace(/'/g, "\\'").replace(/\n/g, "\\n");
+      
+      // サイドバーに表示するスクリプト
+      const script = `
+        if (typeof showProgressBar === 'function') {
+          showProgressBar('${escapedMessage}', ${reset ? 'true' : 'false'});
+        }
+      `;
+      
+      // スクリプトを実行
+      ScriptApp.run(() => {
+        try {
+          const html = HtmlService.createHtmlOutput(`<script>${script}</script>`);
+        } catch (e) {
+          // エラーは無視
+        }
+      });
     } catch (e) {
-      console.log('処理中: ' + message);
-      return;
+      // エラーは無視
     }
-    const state = {
-      message: message,
-      percent: 0,
-      isVisible: true
-    };
-    saveProgressState(state);
-    return true;
-  } catch (finalError) {
-    // ログ出力はここでは行わない
+  } catch (error) {
+    // ログのみに記録
+    Logger.log('プログレスバー表示エラー: ' + error.message);
   }
 };
 
 /**
  * プログレスバーを更新する
- * @param {number} percent 進捗パーセンテージ（0-100）
+ * @param {number} progress 進捗率（0-100）
+ * @param {boolean} completed 完了フラグ（省略可）- v1.5.6で廃止
  */
-UI.updateProgressBar = function(percent) {
+UI.updateProgressBar = function(progress, completed) {
   try {
+    // 新しいプログレス状態を設定
+    _progressState = {
+      isVisible: true,
+      message: _progressState ? _progressState.message : '処理中...',
+      percent: progress,
+      completion: false  // 常にfalseに設定（チェックマークを表示しない）
+    };
+    
+    // スピナーが消えないように明示的に表示状態を維持するスクリプトを追加
     try {
-      SpreadsheetApp.getUi();
+      // エスケープ処理を行う
+      const script = `
+        const spinner = document.querySelector('.spinner');
+        if (spinner) {
+          spinner.style.display = 'block';
+          // スタイルの再計算を強制
+          void spinner.offsetHeight;
+        }
+      `;
+      
+      // スクリプトを実行
+      ScriptApp.run(() => {
+        try {
+          const html = HtmlService.createHtmlOutput(`<script>${script}</script>`);
+        } catch (e) {
+          // エラーは無視
+        }
+      });
     } catch (e) {
-      return;
+      // エラーは無視
     }
-    let state = loadProgressState() || { message: '', percent: 0, isVisible: true };
-    state.percent = percent;
-    saveProgressState(state);
-    return true;
-  } catch (e) {
-    // ログ出力はここでは行わない
+    
+    // サイドバーは自動的に状態を取得するため追加処理は不要
+  } catch (error) {
+    // ログのみに記録
+    Logger.log('プログレスバー更新エラー: ' + error.message);
   }
 };
 
@@ -323,17 +367,29 @@ UI.updateProgressBar = function(percent) {
  */
 UI.hideProgressBar = function() {
   try {
+    // サイドバーに通知を表示（可能な場合）
     try {
-      SpreadsheetApp.getUi();
+      // サイドバーに表示するスクリプト
+      const script = `
+        if (typeof hideProgressBar === 'function') {
+          hideProgressBar();
+        }
+      `;
+      
+      // スクリプトを実行
+      ScriptApp.run(() => {
+        try {
+          const html = HtmlService.createHtmlOutput(`<script>${script}</script>`);
+        } catch (e) {
+          // エラーは無視
+        }
+      });
     } catch (e) {
-      return;
+      // エラーは無視
     }
-    let state = loadProgressState() || { message: '', percent: 100, isVisible: true };
-    state.isVisible = false;
-    saveProgressState(state);
-    return true;
-  } catch (e) {
-    // ログ出力はここでは行わない
+  } catch (error) {
+    // ログのみに記録
+    Logger.log('プログレスバー非表示エラー: ' + error.message);
   }
 };
 
@@ -352,67 +408,29 @@ UI.getStylesheet = function() {
 };
 
 /**
- * 処理結果メッセージをサイドバーに表示する
- * フィルタリング処理の詳細な結果を表示し、サイドバーに固定表示する
+ * 処理結果メッセージを表示する
+ * フィルタリング処理などの結果をサイドバーに表示するための関数
  * @param {string} title メッセージのタイトル
- * @param {Object} stats 統計情報（削除件数、修正件数など）
- * @param {string} [additionalInfo] 追加情報（オプション）
+ * @param {Object} stats 処理の統計情報（削除件数、修正件数など）
+ * @param {string} additionalInfo 追加情報（オプション）
  */
 UI.showResultMessage = function(title, stats, additionalInfo) {
   try {
-    // 統計情報のチェックと初期値設定
-    stats = stats || {};
-    const removedCount = stats.removedCount || 0;
-    const modifiedCount = stats.modifiedCount || 0;
-    const totalProcessed = stats.totalProcessed || 0;
-    const beforeCount = stats.beforeCount || 0;
-    const afterCount = stats.afterCount || 0;
+    // 直近のメッセージを保存 - これをサイドバーがgetLastResultMessageで取得する
+    LAST_RESULT_MESSAGE = {
+      type: 'result',
+      title: title,
+      stats: stats || { removedCount: 0, modifiedCount: 0 },
+      additionalInfo: additionalInfo || ''
+    };
     
-    // フォーマットされた結果メッセージを作成
-    let resultMessage = `<div class="result-message">`;
-    resultMessage += `<h3>${title}</h3>`;
+    // ログに記録
+    Logger.log(`処理結果: ${title} (削除: ${stats?.removedCount || 0}件, 修正: ${stats?.modifiedCount || 0}件)`);
     
-    // 処理前後のデータ数が提供されている場合は表示
-    if (beforeCount > 0 || afterCount > 0) {
-      resultMessage += `<p>データ数: ${beforeCount}件 → ${afterCount}件</p>`;
-    } else {
-      resultMessage += `<p>処理件数: ${totalProcessed}件</p>`;
-    }
-    
-    if (removedCount > 0) {
-      resultMessage += `<p>削除件数: ${removedCount}件</p>`;
-    }
-    
-    if (modifiedCount > 0) {
-      resultMessage += `<p>修正件数: ${modifiedCount}件</p>`;
-    }
-    
-    // 追加情報（設定値など）がある場合は表示
-    if (additionalInfo) {
-      resultMessage += `<p class="additional-info">${additionalInfo}</p>`;
-    }
-    
-    resultMessage += `</div>`;
-    
-    // エスケープ処理を行う
-    const escapedResultMessage = resultMessage.replace(/'/g, "\\'").replace(/\n/g, "\\n");
-    
-    // サイドバーに通知を表示
-    const script = `showResultMessageInSidebar('${escapedResultMessage}');`;
-    try {
-      const html = HtmlService.createHtmlOutput(`<script>${script}</script>`);
-      // トースト通知は表示しない（削除）
-      
-      // ログにも記録
-      Logger.log(`処理結果表示: ${title} (削除: ${removedCount}件, 修正: ${modifiedCount}件)`);
-    } catch (e) {
-      Logger.log('サイドバー結果表示エラー: ' + e.message);
-      // トースト通知は表示しない（削除）
-    }
-  } catch (finalError) {
-    // 最終的なフォールバック - ログのみ
-    console.log('結果メッセージ表示失敗: ' + title);
-    Logger.log('結果メッセージ表示失敗: ' + title);
+    // トーストメッセージは使用しない
+  } catch (error) {
+    // エラーはログのみに記録
+    Logger.logError(`結果メッセージ表示失敗: ${error.message}`);
   }
 };
 
@@ -427,5 +445,103 @@ function getLastResultMessage() {
  * サイドバーからのプログレスバー状態取得用グローバル関数
  */
 function getProgressState() {
-  return loadProgressState();
-} 
+  return _progressState;
+}
+
+/**
+ * プログレストラッカー（複数ステージの進捗管理）
+ */
+UI.ProgressTracker = {
+  /**
+   * プログレストラッカーを初期化する
+   * @param {Object} stages ステージごとの重み付け（ステージ名: 重み）
+   * @return {Object} プログレストラッカーインスタンス
+   */
+  init: function(stages) {
+    const totalWeight = Object.values(stages).reduce((sum, weight) => sum + weight, 0);
+    const stageWeights = {};
+    
+    // 各ステージの相対的な重みを計算
+    for (const stageName in stages) {
+      stageWeights[stageName] = stages[stageName] / totalWeight;
+    }
+    
+    // 累積進捗率を計算（ステージの開始地点の進捗率）
+    const stageCumulativeProgress = {};
+    let cumulativeProgress = 0;
+    
+    for (const stageName in stageWeights) {
+      stageCumulativeProgress[stageName] = cumulativeProgress;
+      cumulativeProgress += stageWeights[stageName] * 100;
+    }
+    
+    return {
+      stageWeights: stageWeights,
+      stageCumulativeProgress: stageCumulativeProgress,
+      currentStage: null,
+      currentStageStartProgress: 0,
+      currentStageWeight: 0,
+      
+      /**
+       * ステージを開始する
+       * @param {string} stageName ステージ名
+       * @param {string} message 表示するメッセージ
+       */
+      startStage: function(stageName, message) {
+        this.currentStage = stageName;
+        this.currentStageStartProgress = this.stageCumulativeProgress[stageName];
+        this.currentStageWeight = this.stageWeights[stageName] * 100;
+        
+        // プログレスバーを更新
+        UI.updateProgressBar(this.currentStageStartProgress);
+        
+        // メッセージを表示（指定がある場合）
+        if (message) {
+          UI.showProgressBar(message);
+        }
+      },
+      
+      /**
+       * 現在のステージの進捗を更新する
+       * @param {number} stageProgress ステージ内の進捗率（0-100）
+       */
+      updateStageProgress: function(stageProgress) {
+        if (this.currentStage === null) return;
+        
+        // ステージ内の進捗を全体の進捗に変換
+        const overallProgress = this.currentStageStartProgress + 
+                               (stageProgress / 100) * this.currentStageWeight;
+        
+        // プログレスバーを更新
+        UI.updateProgressBar(Math.min(overallProgress, 99.9)); // 100%は完了時のみ
+      },
+      
+      /**
+       * 現在のステージを完了する
+       */
+      completeStage: function() {
+        if (this.currentStage === null) return;
+        
+        // ステージの完了地点の進捗率を計算
+        const stageEndProgress = this.currentStageStartProgress + this.currentStageWeight;
+        
+        // プログレスバーを更新
+        UI.updateProgressBar(stageEndProgress);
+      },
+      
+      /**
+       * 全ての処理を完了する
+       * @param {string} message 完了メッセージ（オプション）
+       */
+      complete: function(message) {
+        // 進捗率を100%に設定
+        UI.updateProgressBar(100, true);
+        
+        // メッセージを表示（指定がある場合）
+        if (message) {
+          UI.showProgressBar(message);
+        }
+      }
+    };
+  }
+}; 

@@ -3,8 +3,9 @@
  * 
  * ログ記録機能を提供します。
  * 
- * バージョン: v1.3.1
- * 最終更新日: 2025-05-14
+ * バージョン: v1.5.4
+ * 最終更新日: 2025-06-16
+ * 更新内容: 警告レベルのログ記録機能を追加
  */
 
 // Logger名前空間
@@ -33,6 +34,30 @@ Logger.log = function(message) {
   logSheet.appendRow([
     Utilities.formatDate(timestamp, 'Asia/Tokyo', 'yyyy-MM-dd HH:mm:ss'),
     'INFO',
+    message
+  ]);
+};
+
+/**
+ * 警告ログを記録する
+ * @param {string} message 警告メッセージ
+ */
+Logger.logWarning = function(message) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const logSheet = ss.getSheetByName(Config.SHEET_NAMES.LOG);
+  
+  if (!logSheet) {
+    console.log('ログシートが見つかりません (WARNING): ' + message);
+    return;
+  }
+  
+  // タイムスタンプを取得
+  const timestamp = new Date();
+  
+  // 警告ログを追加
+  logSheet.appendRow([
+    Utilities.formatDate(timestamp, 'Asia/Tokyo', 'yyyy-MM-dd HH:mm:ss'),
+    'WARNING',
     message
   ]);
 };

@@ -3,8 +3,9 @@
  * 
  * CSVのインポートとエクスポート機能を提供します。
  * 
- * バージョン: v1.4.6
- * 最終更新日: 2025-05-23
+ * バージョン: v1.5.3
+ * 最終更新日: 2025-06-15
+ * 更新内容: データ処理の高速化（バッチ処理の実装とメモリ使用量の最適化）
  */
 
 // ImportExport名前空間
@@ -21,7 +22,8 @@ ImportExport.importCsv = function(csvFile) {
   
   try {
     // CSVファイルを読み込み
-    const csvData = Utilities.parseCsv(csvFile.getDataAsString());
+    const csvString = csvFile.getDataAsString();
+    const csvData = Utilities.parseCsv(csvString);
     
     // 行数チェック
     if (csvData.length > Config.MAX_ROWS) {
@@ -50,15 +52,41 @@ ImportExport.importCsv = function(csvFile) {
       listingSheet.clearContents();
     }
     
-    // CSVデータをそのままシートに書き込み（加工やマッピングなし）
+    // CSVデータをバッチで処理して書き込み
     if (csvData.length > 0) {
-      // 全データを一度に書き込み
-      listingSheet.getRange(1, 1, csvData.length, csvData[0].length).setValues(csvData);
+      const totalRows = csvData.length;
+      const batchSize = 1000; // バッチサイズを1000行に設定
+      const columnCount = csvData[0].length;
       
-      // 進捗バーを更新
-      UI.updateProgressBar(100);
+      // 進捗更新のための変数
+      let processedRows = 0;
+      
+      // バッチ処理
+      for (let i = 0; i < totalRows; i += batchSize) {
+        // 現在のバッチサイズを計算（最後のバッチは小さくなる可能性あり）
+        const currentBatchSize = Math.min(batchSize, totalRows - i);
+        
+        // 現在のバッチのデータを取得
+        const batchData = csvData.slice(i, i + currentBatchSize);
+        
+        // バッチデータをシートに書き込み
+        listingSheet.getRange(i + 1, 1, currentBatchSize, columnCount).setValues(batchData);
+      
+        // 進捗を更新
+        processedRows += currentBatchSize;
+        UI.updateProgressBar(Math.floor((processedRows / totalRows) * 100));
+        
+        // メモリを解放する時間を確保
+        if (i + batchSize < totalRows) {
+          Utilities.sleep(50); // 次のバッチの前に短い遅延
+        }
+      }
+      
+      // 不要になった大きな変数を明示的に解放
+      csvData.length = 0;
     }
     
+    // 処理終了メッセージ
     UI.showSuccessMessage(`CSVインポートが完了しました。${csvData.length}件のデータをインポートしました。`);
     Logger.endProcess('CSVインポート完了');
     
@@ -81,20 +109,29 @@ ImportExport.importCsv = function(csvFile) {
 ImportExport.createHeaderMapping = function(sourceHeaders, targetHeaders) {
   const mapping = [];
   
+  // ヘッダーインデックスのキャッシュを作成（検索を高速化）
+  const headerIndexMap = {};
+  sourceHeaders.forEach((header, index) => {
+    headerIndexMap[header.toLowerCase()] = index;
+  });
+  
   // 各ターゲットヘッダーに対応するソースヘッダーのインデックスを検索
   for (let i = 0; i < targetHeaders.length; i++) {
-    const targetHeader = targetHeaders[i];
+    const targetHeader = targetHeaders[i].toLowerCase();
     let sourceIndex = -1;
     
-    // 完全一致を探す
-    sourceIndex = sourceHeaders.findIndex(header => 
-      header.toLowerCase() === targetHeader.toLowerCase());
-    
-    // 完全一致がなければ部分一致を探す
-    if (sourceIndex === -1) {
-      sourceIndex = sourceHeaders.findIndex(header => 
-        header.toLowerCase().includes(targetHeader.toLowerCase()) || 
-        targetHeader.toLowerCase().includes(header.toLowerCase()));
+    // 完全一致をキャッシュから探す（O(1)の操作）
+    if (headerIndexMap[targetHeader] !== undefined) {
+      sourceIndex = headerIndexMap[targetHeader];
+    } else {
+      // 部分一致の場合はループで探す（最適化の余地が少ない）
+      for (let j = 0; j < sourceHeaders.length; j++) {
+        const sourceHeader = sourceHeaders[j].toLowerCase();
+        if (sourceHeader.includes(targetHeader) || targetHeader.includes(sourceHeader)) {
+          sourceIndex = j;
+          break;
+        }
+      }
     }
     
     mapping.push(sourceIndex);
@@ -115,13 +152,16 @@ ImportExport.formatForEbay = function() {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const listingSheet = ss.getSheetByName(Config.SHEET_NAMES.LISTING);
     
-    // データ範囲を取得
-    const dataRange = listingSheet.getDataRange();
-    const values = dataRange.getValues();
+    // データ範囲を取得（一度に全てのデータを取得する代わりにチャンク処理）
+    const totalRows = listingSheet.getLastRow();
+    const totalColumns = listingSheet.getLastColumn();
     
-    // ヘッダー行をスキップ
-    const headerRow = values[0];
-    const dataRows = values.slice(1);
+    if (totalRows <= 1) {
+      throw new Error('出品データが見つかりません。先にデータをインポートしてください。');
+    }
+    
+    // ヘッダー行を取得
+    const headerRow = listingSheet.getRange(1, 1, 1, totalColumns).getValues()[0];
     
     // eBay形式のデータを準備
     const ebayData = [];
@@ -129,19 +169,41 @@ ImportExport.formatForEbay = function() {
     // ヘッダー行を追加
     ebayData.push(Config.SHEET_HEADERS.EBAY_FORMAT);
     
-    // データを変換
-    dataRows.forEach((row, index) => {
-      // 処理の進捗状況を更新（10%単位）
-      if (index % Math.floor(Math.max(dataRows.length, 10) / 10) === 0) {
-        UI.updateProgressBar(Math.floor((index / Math.max(dataRows.length, 1)) * 100));
-      }
-      
-      // eBay形式の行を作成
-      const ebayRow = this.createEbayRow(row);
-      ebayData.push(ebayRow);
-    });
+    // バッチサイズを設定
+    const batchSize = 500;
+    const dataRows = totalRows - 1; // ヘッダーを除く
     
-    UI.showSuccessMessage(`eBayフォーマットへの変換が完了しました。${dataRows.length}件のデータを変換しました。`);
+    // コンディションマップをキャッシュ（毎回の関数呼び出しを減らす）
+    const conditionMapCache = this.createConditionMapCache();
+    
+    // バッチ処理でデータを変換
+    for (let i = 0; i < dataRows; i += batchSize) {
+      // 現在のバッチサイズを計算
+      const currentBatchSize = Math.min(batchSize, dataRows - i);
+      
+      // データバッチを取得
+      const rowsData = listingSheet.getRange(i + 2, 1, currentBatchSize, totalColumns).getValues();
+      
+      // 各行を処理
+      rowsData.forEach((row, index) => {
+        // eBay形式の行を作成（キャッシュしたコンディションマップを使用）
+        const ebayRow = this.createEbayRowOptimized(row, conditionMapCache);
+      ebayData.push(ebayRow);
+        
+        // 進捗を更新（10%ごと）
+        if (index % Math.floor(Math.max(currentBatchSize, 10) / 10) === 0) {
+          const overallProgress = ((i + index) / dataRows) * 100;
+          UI.updateProgressBar(Math.floor(overallProgress));
+        }
+      });
+      
+      // メモリを解放する時間を確保
+      if (i + batchSize < dataRows) {
+        Utilities.sleep(50);
+      }
+    }
+    
+    UI.showSuccessMessage(`eBayフォーマットへの変換が完了しました。${dataRows}件のデータを変換しました。`);
     Logger.endProcess('eBayフォーマット変換完了');
     
     return ebayData;
@@ -155,11 +217,28 @@ ImportExport.formatForEbay = function() {
 };
 
 /**
- * eBay形式の行データを作成する
+ * コンディションマップのキャッシュを作成
+ * @return {Object} コンディションマップのキャッシュ
+ */
+ImportExport.createConditionMapCache = function() {
+  return {
+    'new': '1000', // New
+    'used': '3000', // Used
+    'like new': '1500', // Like New
+    'very good': '2000', // Very Good
+    'good': '2500', // Good
+    'acceptable': '3500', // Acceptable
+    'for parts or not working': '7000' // For parts or not working
+  };
+};
+
+/**
+ * 最適化されたeBay形式の行データを作成する
  * @param {Array} row 元の行データ
+ * @param {Object} conditionMapCache コンディションマップのキャッシュ
  * @return {Array} eBay形式の行データ
  */
-ImportExport.createEbayRow = function(row) {
+ImportExport.createEbayRowOptimized = function(row, conditionMapCache) {
   // 元データの項目
   const title = row[0]; // 商品名
   const price = row[1]; // 価格($)
@@ -172,7 +251,11 @@ ImportExport.createEbayRow = function(row) {
   // 必須項目を設定
   ebayRow[0] = 'Add'; // Action
   ebayRow[2] = title; // Title
-  ebayRow[8] = this.mapCondition(condition); // Condition
+  
+  // コンディションのマッピング（キャッシュを使用）
+  const conditionLower = condition ? condition.toLowerCase() : '';
+  ebayRow[8] = conditionMapCache[conditionLower] || '3000'; // デフォルトは'Used'
+  
   ebayRow[11] = 'FixedPrice'; // Format
   ebayRow[12] = price; // Start price
   ebayRow[14] = '1'; // Quantity
