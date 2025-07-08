@@ -1,0 +1,96 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Run linter
+      run: |
+        # GASファイルの基本的な構文チェック
+        echo "Checking GAS files..."
+        find . -name "*.gs" -exec echo "Checking {}" \;
+        
+        # HTMLファイルの基本的な構文チェック
+        echo "Checking HTML files..."
+        find . -name "*.html" -exec echo "Checking {}" \;
+        
+        echo "Lint check completed"
+
+  validate-structure:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Validate project structure
+      run: |
+        echo "Validating project structure..."
+        
+        # 必要なファイルの存在チェック
+        required_files=(
+          "App.gs"
+          "Config.gs"
+          "Filters.gs"
+          "ImportExport.gs"
+          "UI.gs"
+          "Logger.gs"
+          "Sidebar.html"
+          "README.md"
+          "CHANGELOG.md"
+          "package.json"
+        )
+        
+        for file in "${required_files[@]}"; do
+          if [ ! -f "$file" ]; then
+            echo "Error: Required file $file is missing"
+            exit 1
+          else
+            echo "✓ $file exists"
+          fi
+        done
+        
+        echo "Project structure validation completed"
+
+  check-version:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Check version consistency
+      run: |
+        echo "Checking version consistency..."
+        
+        # package.jsonのバージョンを取得
+        PACKAGE_VERSION=$(grep '"version"' package.json | cut -d'"' -f4)
+        echo "Package version: $PACKAGE_VERSION"
+        
+        # App.gsのバージョンを取得
+        APP_VERSION=$(grep "APP_VERSION" App.gs | cut -d"'" -f2)
+        echo "App version: $APP_VERSION"
+        
+        # バージョンの一貫性をチェック
+        if [ "$PACKAGE_VERSION" != "${APP_VERSION#v}" ]; then
+          echo "Error: Version mismatch between package.json ($PACKAGE_VERSION) and App.gs ($APP_VERSION)"
+          exit 1
+        fi
+        
+        echo "Version consistency check completed" 

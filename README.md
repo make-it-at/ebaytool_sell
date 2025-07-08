@@ -1,19 +1,107 @@
-# みずのとい
+# eBay出品管理ツール (ebaytool_sell)
+
+[![GitHub release](https://img.shields.io/github/release/make-it-at/ebaytool_sell.svg)](https://github.com/make-it-at/ebaytool_sell/releases)
+[![GitHub issues](https://img.shields.io/github/issues/make-it-at/ebaytool_sell.svg)](https://github.com/make-it-at/ebaytool_sell/issues)
+[![GitHub license](https://img.shields.io/github/license/make-it-at/ebaytool_sell.svg)](https://github.com/make-it-at/ebaytool_sell/blob/main/LICENSE)
 
 eBay出品作業を効率化するためのGoogle Apps Scriptプロジェクトです。CSVデータの処理、フィルタリング、自動化機能を提供します。
 
-## 主な機能
+## 🚀 主な機能
 
-- CSVインポート/エクスポート
-- NGワードフィルタリング（リスト削除/部分削除）
-- 文字数制限フィルター
-- 重複チェック
-- 価格フィルター
-- 所在地情報修正
+- **CSVインポート/エクスポート** - eBayデータの一括処理
+- **NGワードフィルタリング** - リスト削除/部分削除の自動化
+- **重複チェック** - 類似商品の自動検出・削除
+- **文字数制限フィルター** - 短すぎるタイトルの自動削除
+- **価格フィルター** - 低価格商品の自動削除
+- **所在地情報修正** - 自動データクリーニング
+- **ヒューマンエラー防止** - 処理順序の強制実行
 
-## バージョン情報
+## 📊 バージョン情報
 
-現在のバージョン: v1.5.14 (2025-06-18)
+現在のバージョン: **v1.5.14** (2025-06-18)
+
+### 最新の改善点
+- ✅ 全処理一括実行の実行状態管理システム
+- ✅ CSVエクスポートボタンの制御機能
+- ✅ 視覚的フィードバック機能
+- ✅ 処理順序の強制実行（CSVインポート → 全処理一括実行 → CSVエクスポート）
+- ✅ パフォーマンス改善とエラーハンドリング強化
+
+## 🛠️ 開発環境のセットアップ
+
+### 前提条件
+
+- Node.js と npm がインストール済み
+- Google アカウント
+- Git がインストール済み
+
+### インストール手順
+
+1. **リポジトリのクローン**
+   ```bash
+   git clone https://github.com/make-it-at/ebaytool_sell.git
+   cd ebaytool_sell
+   ```
+
+2. **依存関係のインストール**
+   ```bash
+   npm install
+   ```
+
+3. **clasp のインストール**
+   ```bash
+   npm install -g @google/clasp
+   ```
+
+4. **Google アカウントで認証**
+   ```bash
+   clasp login
+   ```
+
+5. **GASプロジェクトの設定**
+   - `.clasp.json`ファイルを作成（このファイルはGitで管理されません）
+   - Google Apps Scriptプロジェクトの設定を行う
+
+6. **コードのアップロード**
+   ```bash
+   clasp push
+   ```
+
+## 🔄 開発ワークフロー
+
+### ブランチ戦略
+- `main`: 本番環境用の安定版
+- `develop`: 開発用ブランチ
+- `feature/*`: 機能追加用ブランチ
+
+### 開発手順
+1. `develop`ブランチから新しい機能ブランチを作成
+2. 機能を実装・テスト
+3. `develop`ブランチにマージ
+4. 安定版を`main`ブランチにリリース
+
+### コミット規約
+- `feat`: 新機能追加
+- `fix`: バグ修正
+- `refactor`: リファクタリング
+- `docs`: ドキュメント更新
+- `style`: スタイル修正
+
+## 📋 使用方法
+
+1. **スプレッドシートを開く**
+2. **サイドバーから操作を行う**
+   - 📥 CSVインポート: リサーチデータをインポート
+   - ⚙️ 全処理一括実行: 各種フィルターを適用
+   - 📤 CSVエクスポート: eBay形式でエクスポート
+
+### ⚠️ 重要: 処理順序の遵守
+システムは以下の順序での実行を強制します：
+1. **CSVインポート** ← データの読み込み
+2. **全処理一括実行** ← 各種フィルター処理
+3. **CSVエクスポート** ← 結果の出力
+
+全処理一括実行をスキップしてエクスポートを行うことはできません。
 
 ## 設定シートの使い方
 
@@ -79,43 +167,6 @@ eBay出品作業を効率化するためのGoogle Apps Scriptプロジェクト�
 - **エクスポート**: eBayアップロード用に整形されたデータ
 - **設定**: NGワードリスト、所在地置換パターン、各種閾値設定など
 - **ログ**: 処理ログの記録
-
-## 開発環境のセットアップ
-
-### 前提条件
-
-- Node.js と npm がインストール済み
-- Google アカウント
-
-### インストール手順
-
-1. clasp のインストール
-   ```
-   npm install -g @google/clasp
-   ```
-
-2. Google アカウントで認証
-   ```
-   clasp login
-   ```
-
-3. プロジェクトのクローン
-   ```
-   clasp clone 1t6syXBcDCXv0H-pmS_RjICrpH4XTZAc3BsRWEP98RSq0pNfhs_jnVZEL
-   ```
-
-4. コードの編集後、アップロード
-   ```
-   clasp push
-   ```
-
-## 使用方法
-
-1. スプレッドシートを開く
-2. 表示されるサイドバーから操作を行う
-   - CSVインポート: リサーチデータをインポート
-   - フィルター処理: 各種フィルターを適用
-   - CSVエクスポート: eBay形式でエクスポート
 
 ## カスタマイズ
 

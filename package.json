@@ -1,5 +1,37 @@
 {
+  "name": "ebaytool_sell",
+  "version": "1.5.14",
+  "description": "eBay出品管理ツール - Google Apps Script による自動化システム",
+  "main": "App.gs",
+  "scripts": {
+    "push": "clasp push",
+    "pull": "clasp pull",
+    "deploy": "clasp deploy",
+    "open": "clasp open",
+    "logs": "clasp logs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/make-it-at/ebaytool_sell.git"
+  },
+  "keywords": [
+    "ebay",
+    "google-apps-script",
+    "automation",
+    "csv",
+    "filtering",
+    "data-processing"
+  ],
+  "author": "make-it-at",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/make-it-at/ebaytool_sell/issues"
+  },
+  "homepage": "https://github.com/make-it-at/ebaytool_sell#readme",
   "devDependencies": {
-    "@google/clasp": "^3.0.4-alpha"
+    "@google/clasp": "^2.4.2"
+  },
+  "engines": {
+    "node": ">=14.0.0"
   }
 }
